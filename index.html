@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#111827">
+<title>My Personal Inventory</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e6e9ef;
+  --primary:#2563eb;--primary2:#1d4ed8;--success:#16a34a;--danger:#dc2626;
+  --warning:#d97706;--shadow:0 10px 30px rgba(15,23,42,.07);--radius:18px
+}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit} button{cursor:pointer}
+.app{display:flex;min-height:100vh}.sidebar{width:250px;background:#111827;color:#fff;padding:22px 14px;position:fixed;left:0;top:0;bottom:0;z-index:20}
+.brand{padding:8px 12px 24px}.brand h1{font-size:20px;margin:0 0 4px}.brand p{font-size:12px;color:#9ca3af;margin:0}
+.nav button{display:flex;width:100%;border:0;background:transparent;color:#cbd5e1;padding:12px;border-radius:12px;text-align:left;margin:3px 0;gap:11px;align-items:center}
+.nav button:hover,.nav button.active{background:#1f2937;color:#fff}.nav .icon{width:24px;text-align:center}
+.main{margin-left:250px;width:calc(100% - 250px);padding:28px;max-width:1500px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:24px}.topbar h2{margin:0;font-size:28px}.topbar p{margin:5px 0 0;color:var(--muted)}
+.primary,.secondary,.danger{border:0;border-radius:12px;padding:10px 15px;font-weight:650}.primary{background:var(--primary);color:white}.primary:hover{background:var(--primary2)}.secondary{background:#eef2ff;color:#334155}.danger{background:#fee2e2;color:#991b1b}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.stat{background:var(--card);padding:20px;border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--line)}.stat .n{font-size:30px;font-weight:750}.stat .l{color:var(--muted);font-size:13px;margin-top:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-top:18px}.card h3{margin:0 0 14px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.toolbar input,.toolbar select{min-width:180px;flex:1}
+input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 12px;background:#fff;color:var(--text);outline:none}input:focus,select:focus,textarea:focus{border-color:#93b4ff;box-shadow:0 0 0 3px #dbeafe}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}th,td{padding:13px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.badge{display:inline-flex;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:650;background:#eef2ff;color:#3730a3}.badge.green{background:#dcfce7;color:#166534}.badge.orange{background:#ffedd5;color:#9a3412}.badge.red{background:#fee2e2;color:#991b1b}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #cfd6e2;border-radius:14px}.small{font-size:12px;color:var(--muted)}.item-thumb{width:46px;height:46px;object-fit:cover;border-radius:10px;vertical-align:middle;margin-right:8px;border:1px solid var(--line)}.link-button{border:0;background:transparent;color:var(--primary);padding:0;text-align:left;font-weight:650}.link-button:hover{text-decoration:underline}.daily-list{display:block;counter-reset:daily-number;list-style:none;margin:0;padding-left:34px}.daily-list li{display:list-item;counter-increment:daily-number;position:relative;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}.daily-list li::before{content:counter(daily-number) '.';position:absolute;left:-30px;top:10px;color:var(--primary);font-weight:800;font-size:16px}.daily-list li:last-child{border-bottom:0}.daily-actions{float:right;display:flex;gap:6px}.daily-add{float:right;padding:6px 10px;font-size:12px}.checklist-input{display:flex;align-items:center;gap:8px;margin:8px 0}.checklist-input>span{min-width:22px;color:var(--primary);font-weight:800}.checklist-input input{flex:1;min-width:0}.add-check-item{margin-top:6px}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}.modal.open{display:flex}.modal-box{background:#fff;width:min(650px,100%);max-height:90vh;overflow:auto;border-radius:20px;padding:22px;box-shadow:0 25px 70px rgba(0,0,0,.2)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.modal-head h3{margin:0}.close{border:0;background:#f1f5f9;border-radius:10px;padding:7px 11px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:650;color:#475569}.actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+.item-list{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.item-check{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;gap:9px;align-items:center}.item-check input{width:auto}.progress{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden}.progress>div{height:100%;background:var(--primary);width:0}.journey-card{border:1px solid var(--line);border-radius:15px;padding:16px;margin-bottom:12px}.journey-head{display:flex;justify-content:space-between;gap:10px}.journey-title{font-weight:750}.journey-meta{font-size:12px;color:var(--muted);margin:4px 0 12px}.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.mobile-menu{display:none}.save-note{font-size:12px;color:var(--muted);margin:0 0 14px}.save-note strong{color:var(--success)}
+@media(max-width:900px){.sidebar{transform:translateX(-100%);transition:.2s}.sidebar.open{transform:translateX(0)}.main{margin-left:0;width:100%;padding:18px}.mobile-menu{display:inline-flex}.grid{grid-template-columns:repeat(2,1fr)}.item-list{grid-template-columns:1fr}}
+@media(max-width:560px){.grid{grid-template-columns:1fr 1fr;gap:10px}.stat{padding:14px}.stat .n{font-size:24px}.topbar{align-items:flex-start}.topbar h2{font-size:22px}.topbar p{font-size:12px}.topbar>.primary{padding:9px 10px;white-space:nowrap}.form-grid,.two{grid-template-columns:1fr}.card{padding:15px}.toolbar{display:grid;grid-template-columns:1fr}.toolbar input,.toolbar select{min-width:0;width:100%}.toolbar .primary{width:100%}.table-wrap{overflow:visible}table{min-width:0}table thead{display:none}table,tbody,tr,td{display:block;width:100%}tr{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}td{border:0;padding:5px 0}td:nth-child(2)::before{content:'Quantity: ';color:var(--muted)}.actions{flex-wrap:wrap}.actions button{flex:1}}
+@media(max-width:560px){.daily-add{float:none;margin:8px 0 0;display:block}.daily-list li{display:block}.daily-actions{float:none;flex-shrink:0;display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:100%}.daily-actions button{padding:7px 8px;font-size:12px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><h1>📦 My Personal Inventory</h1><p>Items • Locations • Journeys • Packing</p></div>
+  <nav class="nav">
+    <button class="active" data-page="dashboard">🏠 <span>Dashboard</span></button>
+    <button data-page="inventory">📦 <span>My Inventory</span></button>
+    <button data-page="journeys">🧳 <span>Journeys</span></button>
+    <button data-page="shopping">🛒 <span>Things to Buy</span></button>
+    <button data-page="history">📜 <span>History</span></button>
+  </nav>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="secondary mobile-menu" onclick="toggleSidebar()">☰</button>
+      <div><h2 id="pageTitle">Dashboard</h2><p id="pageSub">A simple personal system for tracking your belongings and journeys.</p></div>
+    </div>
+    <button id="newChecklistButton" class="primary" onclick="openChecklistModal()">+ New Checklist</button>
+  </div>
+  <div id="content"></div>
+</main>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="modalTitle">Add Item</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+const KEY='personalInventoryV1';
+const starterItems=['Mobile 📱','Headphones 🎧','Wallet','CNIC','Visa Card','Glasses 🤓','Watch','Pen 🖊️','Hair Band','Laptop 💻','Books 📚','Notebook 📒','Sheets','Marker','ID Card','Stapler','Clothes','Bunain','Trousers','Shirts','Pillow','Blanket','Mosquito Net','Chapal','Chapli','Boots','Toothbrush','Toothpaste','Miswak','Soap','Face Wash','Shampoo','Hair Oil','Hair Brush','Perfume','Beard Trimmer','Scissors','Razor','Nail Cutter','Lalkash','Tissue Paper','Keys','Iron','Gas'];
+const defaults={
+  locations:[
+    {id:'loc-home',name:'Home',type:'Home',notes:'Home location'},
+    {id:'loc-hostel',name:'D.I. Khan — Hostel',type:'Hostel',notes:'Main hostel location'},
+    {id:'loc-with-me',name:'With Me',type:'Other',notes:'Things currently with me'}
+  ],
+  items:starterItems.map(name=>({id:'item-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-'),name,qty:1,locationId:'loc-home',important:false,notes:''})),
+  journeys:[],
+  shopping:[],
+  checklists:[
+    {id:'check-daily',name:'Daily Use',items:['Mobile + Headphones','Wallet: CNIC + Visa Card','Glasses','Hair Band','Pen','Watch'].map(text=>({text,done:false}))},
+    {id:'check-hostel',name:'Hostel Use',items:['Laptop 💻','Books + Notebook + Sheets + Pen + Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint + Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap + Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'].map(text=>({text,done:false}))}
+  ]
+};
+let db=load();
+let pendingImage='';
+let currentPage='dashboard';
+if(!db.items.length){db.items=structuredClone(defaults.items);save()}
+const missingChecklists=defaults.checklists.filter(def=>!db.checklists.some(item=>item.id===def.id));
+if(missingChecklists.length){db.checklists.push(...structuredClone(missingChecklists));save()}
+const dailyNames=['Mobile','Headphones','Wallet','CNIC','Visa Card','Glasses','Sunglasses','Watch','Pen','Hair Band','Waistcoat','Chadar'];
+let itemsUpdated=false;
+db.items.forEach(item=>{if(!item.category){item.category=dailyNames.some(name=>item.name.toLowerCase().includes(name.toLowerCase()))?'Daily Use':'Hostel Use';itemsUpdated=true}});
+if(itemsUpdated)save();
+if(!db.locationSetupV1){
+  const hostel=db.locations.find(item=>item.id==='loc-hostel'||item.type==='Hostel');
+  if(hostel)db.items.filter(item=>item.category==='Hostel Use').forEach(item=>item.locationId=hostel.id);
+  db.locationSetupV1=true;
+  save();
+}
+if(!db.withMeSetupV1){
+  let withMe=db.locations.find(item=>item.id==='loc-with-me'||item.name==='With Me');
+  if(!withMe){withMe={id:'loc-with-me',name:'With Me',type:'Other',notes:'Things currently with me'};db.locations.push(withMe)}
+  const home=db.locations.find(item=>item.id==='loc-home'||item.name==='Katta Khel — Home');
+  if(home)db.items.filter(item=>item.locationId===home.id&&item.category==='Daily Use').forEach(item=>item.locationId=withMe.id);
+  db.withMeSetupV1=true;
+  save();
+}
+if(!db.dailyUseSetupV2){
+  const keptDaily=['Mobile','Headphones','Wallet','CNIC','Visa Card','Glasses','Hair Band','Pen'];
+  db.items.forEach(item=>{if(item.category==='Daily Use'&&!keptDaily.some(name=>item.name.toLowerCase()===name.toLowerCase()))item.category='Other'});
+  const dailyChecklist=db.checklists.find(item=>item.id==='check-daily');
+  if(dailyChecklist)dailyChecklist.items=structuredClone(defaults.checklists.find(item=>item.id==='check-daily').items);
+  db.dailyUseSetupV2=true;
+  save();
+}
+if(!db.dailyUseSetupV3){
+  const keptDaily=['Mobile','Headphones','Wallet','CNIC','Visa Card','Glasses','Hair Band','Pen'];
+  db.items.forEach(item=>{
+    const isKept=keptDaily.some(name=>item.name.toLowerCase().startsWith(name.toLowerCase()));
+    if(isKept)item.category='Daily Use';
+  });
+  db.dailyUseSetupV3=true;
+  save();
+}
+if(!db.dailyUseSetupV4){
+  const removeItems=['Sunglasses','Waistcoat','Chadar'];
+  db.items=db.items.filter(item=>!removeItems.some(name=>item.name.toLowerCase().startsWith(name.toLowerCase())));
+  const watch=db.items.find(item=>item.name.toLowerCase().startsWith('watch'));
+  if(watch)watch.category='Daily Use';
+  const dailyChecklist=db.checklists.find(item=>item.id==='check-daily');
+  if(dailyChecklist)dailyChecklist.items=structuredClone(defaults.checklists.find(item=>item.id==='check-daily').items);
+  db.dailyUseSetupV4=true;
+  save();
+}
+if(!db.hostelChecklistSetupV2){
+  const hostelChecklist=db.checklists.find(item=>item.id==='check-hostel');
+  if(hostelChecklist)hostelChecklist.items=structuredClone(defaults.checklists.find(item=>item.id==='check-hostel').items);
+  db.hostelChecklistSetupV2=true;
+  save();
+}
+if(!db.checklistLinksSetupV1){
+  db.items.forEach(item=>{if(!item.checklistId)item.checklistId=item.category==='Daily Use'?'check-daily':item.category==='Hostel Use'?'check-hostel':''});
+  db.checklistLinksSetupV1=true;
+  save();
+}
+if(!db.homeLocationSetupV1){
+  const home=db.locations.find(item=>item.id==='loc-home'||item.name==='Katta Khel — Home');
+  if(home){home.name='Home';home.type='Home';home.notes='Home location'}
+  db.homeLocationSetupV1=true;
+  save();
+}
+
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(!x)return structuredClone(defaults);return {...structuredClone(defaults),...x,locations:x.locations||[],items:x.items||[],journeys:x.journeys||[],shopping:x.shopping||[],checklists:x.checklists||[]}}catch(e){return structuredClone(defaults)}}
+function save(){localStorage.setItem(KEY,JSON.stringify(db));}
+function uid(p='id'){return p+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
+function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function locName(id){return db.locations.find(x=>x.id===id)?.name||'Unknown location'}
+function itemName(id){return db.items.find(x=>x.id===id)?.name||'Unknown item'}
+function fmtDate(d){if(!d)return '';return new Date(d+'T00:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
+
+function render(page='dashboard'){
+  currentPage=page;
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+  document.getElementById('newChecklistButton').style.display=page==='inventory'?'inline-flex':'none';
+  const titles={dashboard:['Dashboard','Your current belongings, journeys and reminders.'],inventory:['My Inventory','Everything you own, with quantity and current location.'],locations:['Locations','Places where your belongings can be stored or moved.'],journeys:['Journeys','Plan, pack, record and later confirm return journeys.'],shopping:['Things to Buy','A simple reminder list for future purchases.'],checklists:['Checklists','Reusable personal preparation lists.'],history:['History','Your completed journeys and movement records.']};
+  document.getElementById('pageTitle').textContent=titles[page][0];document.getElementById('pageSub').textContent=titles[page][1];
+  const views={dashboard:viewDashboard,inventory:viewInventory,locations:viewLocations,journeys:viewJourneys,shopping:viewShopping,checklists:viewChecklists,history:viewHistory};
+  document.getElementById('content').innerHTML=views[page]();
+  if(page==='inventory') bindInventory();
+}
+function viewDashboard(){
+  const packed=activePackingCount(), planned=activePlannedCount();
+  const dashboardJourney=db.journeys.slice().reverse().find(item=>!item.hideFromDashboard);
+  return `<p class="save-note"><strong>Saved on this device</strong> • Your checklist progress and inventory changes are stored automatically in this browser.</p><div class="grid">
+    <div class="stat"><div class="n">${db.items.length}</div><div class="l">Total item types</div></div>
+    <div class="stat"><div class="n">${db.locations.length}</div><div class="l">Locations</div></div>
+    <div class="stat"><div class="n">${db.journeys.length}</div><div class="l">Journeys</div></div>
+    <div class="stat"><div class="n">${db.shopping.filter(x=>!x.purchased).length}</div><div class="l">Things to buy</div></div>
+  </div>
+  <div class="two">
+    <div class="card"><h3>🧳 Current Journey Packing</h3>${dashboardJourney?journeyMini(dashboardJourney):'<div class="empty">No journey yet. Create your first journey.</div>'}</div>
+    <div class="card"><h3>🛒 Purchase Reminders</h3>${shoppingMini()}</div>
+  </div>
+  <div class="card"><h3>☑️ Your Checklists</h3><div class="empty">Open My Inventory to manage your checklists.</div></div>`;
+}
+function activePlannedCount(){const j=db.journeys[db.journeys.length-1];return j?.items?.length||0}
+function activePackingCount(){const j=db.journeys[db.journeys.length-1];return j?.items?.filter(x=>x.packed).length||0}
+function journeyMini(j){
+  const n=j.items?.length||0,p=j.items?.filter(x=>x.packed).length||0;
+  return `<div class="journey-card"><div class="journey-head"><div><div class="journey-title">${esc(j.name||locName(j.from)+' → '+locName(j.to))}</div><div class="journey-meta">${esc(locName(j.from))} → ${esc(locName(j.to))} • ${fmtDate(j.date)}</div></div><span class="badge">${p}/${n} packed</span></div><div class="progress"><div style="width:${n?Math.round(p/n*100):0}%"></div></div><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" onclick="openJourneyFromDashboard('${j.id}')">Open Journey</button><button class="danger" onclick="removeJourneyFromDashboard('${j.id}')">Remove from Dashboard</button></div></div>`;
+}
+function openJourneyFromDashboard(id){render('journeys');openJourney(id)}
+function shoppingMini(){
+  const arr=db.shopping.filter(x=>!x.purchased&&!x.hideFromDashboard).slice(0,5);if(!arr.length)return '<div class="empty">Nothing on your shopping list.</div>';
+  return arr.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)"><button class="link-button" onclick="openShoppingItem('${x.id}')">${esc(x.name)}</button><span class="badge ${x.priority==='High'?'red':x.priority==='Low'?'green':'orange'}">${esc(x.priority)}</span><button class="danger" onclick="removeShoppingFromDashboard('${x.id}')">Remove</button></div>`).join('')+`<div style="margin-top:12px"><button class="secondary" onclick="render('shopping')">View all</button></div>`;
+}
+function locationSummary(){
+  if(!db.locations.length)return '<div class="empty">No locations.</div>';
+  return db.locations.map(l=>{const count=db.items.filter(i=>i.locationId===l.id).length;return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--line)"><button class="link-button" onclick="openLocationItems('${l.id}')">📍 ${esc(l.name)}</button><span class="badge">${count} item types</span></div>`}).join('');
+}
+function openShoppingItem(id){render('shopping');const item=document.querySelector(`[onclick="togglePurchased('${id}')"]`);if(item)item.scrollIntoView({behavior:'smooth',block:'center'})}
+function removeShoppingFromDashboard(id){const item=db.shopping.find(x=>x.id===id);if(item&&confirm('Remove this reminder from Dashboard only? The original Shopping record will remain safe.')){item.hideFromDashboard=true;save();render('dashboard')}}
+function removeJourneyFromDashboard(id){const journey=db.journeys.find(x=>x.id===id);if(journey&&confirm('Remove this journey from Dashboard only? The original Journey and History record will remain safe.')){journey.hideFromDashboard=true;save();render('dashboard')}}
+function viewInventory(){
+  return `<div class="card">
+    <div class="toolbar"><input id="invSearch" placeholder="Search your checklists..." oninput="filterInventory()"><select id="invChecklist" onchange="filterInventory()"><option value="">All checklists</option>${checklistOptions()}</select></div>
+    <div class="table-wrap"><table><tbody id="inventoryBody">${inventoryRows(db.items)}</tbody></table></div>
+  </div>`;
+}
+function checklistOptions(){return db.checklists.map(item=>`<option value="${item.id}">${esc(item.name)}</option>`).join('')}
+function inventoryRows(items){
+  if(!items.length)return '<tr><td colspan="3"><div class="empty">No items yet. Add your first item.</div></td></tr>';
+  const selectedChecklist=document.getElementById('invChecklist')?.value||'';
+  if(selectedChecklist&&!['check-daily','check-hostel'].includes(selectedChecklist))return checklistRows(items,db.checklists.find(item=>item.id===selectedChecklist)?.name,selectedChecklist);
+  const dailyItems=items.filter(item=>item.checklistId==='check-daily');
+  const groups=['Daily Use','Hostel Use','Other'];
+  const hostelItems=items.filter(item=>item.checklistId==='check-hostel');
+  const customChecklistIds=[...new Set(items.map(item=>item.checklistId).filter(id=>id&&!['check-daily','check-hostel'].includes(id)))];
+  return (dailyItems.length?dailyUseRows(dailyItems):'')+(hostelItems.length?hostelUseRows(hostelItems):'')+customChecklistIds.map(id=>checklistRows(items.filter(item=>item.checklistId===id),db.checklists.find(item=>item.id===id)?.name,id)).join('');
+}
+function dailyUseRows(items){
+  const groups=[['Mobile + Headphones',['Mobile','Headphones']],['Wallet (CNIC + Visa Card)',['Wallet','CNIC','Visa Card']],['Glasses',['Glasses']],['Hair Band',['Hair Band']],['Pen',['Pen']],['Watch',['Watch']]];
+  return `<tr class="category-row"><td colspan="3"><strong>📱 Daily Use</strong><span class="small"> • 6 items</span><button class="primary daily-add" onclick="openDailyItemModal()">+ Add Daily Item</button></td></tr><tr><td colspan="3"><ol class="daily-list">${groups.map(([label])=>`<li><strong>${label}</strong></li>`).join('')}</ol></td></tr>`;
+}
+function openDailyItemModal(){openItemModal();document.getElementById('fCategory').value='Daily Use';const withMe=db.locations.find(item=>item.id==='loc-with-me');if(withMe)document.getElementById('fLoc').value=withMe.id}
+function hostelUseRows(items){
+  const groups=['Laptop 💻','Books + Notebook + Sheets + Pen + Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint + Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap + Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'];
+  return `<tr class="category-row"><td colspan="3"><strong>🧳 Hostel Use</strong><span class="small"> • 14 items</span><button class="primary daily-add" onclick="openHostelItemModal()">+ Add Hostel Item</button></td></tr><tr><td colspan="3"><ol class="daily-list hostel-list">${groups.map(label=>`<li><strong>${label}</strong></li>`).join('')}</ol></td></tr>`;
+}
+function openHostelItemModal(){openItemModal();document.getElementById('fCategory').value='Hostel Use';const hostel=db.locations.find(item=>item.id==='loc-hostel');if(hostel)document.getElementById('fLoc').value=hostel.id}
+function checklistRows(items,title,id){return `<tr class="category-row"><td colspan="3"><strong>☑️ ${esc(title||document.getElementById('invChecklist')?.selectedOptions[0]?.text||'Checklist')}</strong><span class="small"> • ${items.length} items</span>${id?`<button class="primary daily-add" onclick="openChecklistItemModal('${id}')">+ Add Item</button>`:''}</td></tr><tr><td colspan="3"><ol class="daily-list">${items.map(item=>`<li><strong>${esc(item.name)}</strong></li>`).join('')}</ol></td></tr>`}
+function openChecklistItemModal(checklistId){openItemModal();document.getElementById('fChecklist').value=checklistId;const checklist=db.checklists.find(item=>item.id===checklistId);document.getElementById('fCategory').value=checklist?.name.toLowerCase().includes('hostel')?'Hostel Use':'Daily Use'}
+function bindInventory(){}
+function filterInventory(){const q=(document.getElementById('invSearch').value||'').toLowerCase(),c=document.getElementById('invChecklist').value;let a=db.items.filter(i=>(!q||i.name.toLowerCase().includes(q))&&(!c||i.checklistId===c));document.getElementById('inventoryBody').innerHTML=inventoryRows(a)}
+
+function viewLocations(){
+  return `<div class="card"><div class="toolbar"><button class="primary" onclick="openLocationModal()">+ Add Location</button></div>${db.locations.map(l=>`<div class="journey-card"><div class="journey-head"><div><div class="journey-title">📍 ${esc(l.name)}</div><div class="journey-meta">${esc(l.type||'Location')} ${l.notes?'• '+esc(l.notes):''}</div></div><span class="badge">${db.items.filter(i=>i.locationId===l.id).length} item types</span></div></div>`).join('')||'<div class="empty">No locations.</div>'}</div>`;
+}
+function openLocationItems(id){render('inventory');document.getElementById('invLoc').value=id;filterInventory()}
+function deleteLocation(id){
+  const location=db.locations.find(item=>item.id===id);if(!location)return;
+  const used=db.items.some(item=>item.locationId===id)||db.journeys.some(item=>item.from===id||item.to===id);
+  if(used){alert('Move or remove this location\'s items and journey records first.');return}
+  if(confirm(`Delete location "${location.name}"?`)){db.locations=db.locations.filter(item=>item.id!==id);save();render('locations')}
+}
+
+function viewJourneys(){
+  return `<div class="card"><div class="toolbar"><button class="primary" onclick="openJourneyModal()">+ New Journey</button></div>${db.journeys.slice().reverse().map(journeyCard).join('')||'<div class="empty">No journeys yet. Create one and all your inventory items will be available for selection.</div>'}</div>`;
+}
+function journeyCard(j){
+  const returning=j.status==='Completed',finished=j.status==='Returned',items=returning||finished?(j.returnItems||(j.items||[]).map(x=>({itemId:x.itemId,packed:false}))):(j.items||[]),n=items.length,p=items.filter(x=>x.packed).length;
+  return `<div class="journey-card"><div class="journey-head"><div><div class="journey-title">🧳 ${esc(j.name||locName(j.from)+' → '+locName(j.to))}</div><div class="journey-meta">${esc(locName(j.from))} → ${esc(locName(j.to))} • ${fmtDate(j.date)} • ${finished?'Return complete':returning?'Return packing':'Outbound packing'}</div></div><span class="badge ${p===n&&n?'green':'orange'}">${p}/${n} ${returning||finished?'returned':'packed'}</span></div><div class="progress"><div style="width:${n?Math.round(p/n*100):0}%"></div></div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="openJourney('${j.id}')">${returning?'Open Return Record':finished?'View Return Record':'Open / Pack'}</button>${returning?`<button class="secondary" onclick="completeJourney('${j.id}')">Save Return</button>`:!finished?`<button class="secondary" onclick="completeJourney('${j.id}')">Save & Record Trip</button>`:''}<button class="danger" onclick="deleteJourney('${j.id}')">Delete</button></div></div>`;
+}
+function openJourney(id){
+  const j=db.journeys.find(x=>x.id===id);if(!j)return;
+  const returning=j.status==='Completed'||j.status==='Returned',finished=j.status==='Returned';
+  if(!returning&&!j.outboundDefaultsSetup){(j.items||[]).forEach(item=>item.packed=true);j.outboundDefaultsSetup=true;save()}
+  if(returning&&!j.returnItems)j.returnItems=(j.items||[]).map(x=>({itemId:x.itemId,packed:false}));
+  const items=returning?j.returnItems:(j.items||[]),label=returning?'Return packing':'Outbound packing',p=items.filter(x=>x.packed).length,n=items.length;
+  openModal(`${returning?'Return record: ':'Journey: '}${j.name||locName(j.from)+' → '+locName(j.to)}`,`<div class="small" style="margin-bottom:12px">${esc(locName(j.from))} → ${esc(locName(j.to))} • ${fmtDate(j.date)}</div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:8px"><strong>${label}</strong><span id="packCount">${p}/${n}</span></div>
+  <div class="progress"><div id="packBar" style="width:${n?p/n*100:0}%"></div></div>
+  ${returning?'':'<label class="item-check" style="margin-top:14px"><input id="selectAllPackingItems" type="checkbox" checked onchange="toggleAllPackingItems(this.checked)"> <strong>Select All Items</strong></label>'}<div class="item-list" style="margin-top:14px">${items.map((x,idx)=>`<label class="item-check"><input type="checkbox" name="packingItem" ${x.packed?'checked':''} onchange="togglePacked('${j.id}',${idx},this.checked,${returning});updatePackingSelectAll()"> <span>${esc(itemName(x.itemId))}</span></label>`).join('')||'<div class="empty" style="grid-column:1/-1">No items selected for this journey.</div>'}</div>
+  <div class="actions"><button class="secondary" onclick="closeModal()">Close</button>${finished?'':`<button class="primary" onclick="completeJourney('${j.id}')">${returning?'Save Return Record':'Save & Record Trip'}</button>`}</div>`);
+}
+function togglePacked(jid,idx,val,returning=false){const j=db.journeys.find(x=>x.id===jid);if(!j)return;const items=returning?(j.returnItems||(j.returnItems=j.items.map(x=>({itemId:x.itemId,packed:false})))):j.items;items[idx].packed=val;save();const p=items.filter(x=>x.packed).length,n=items.length;document.getElementById('packCount').textContent=`${p}/${n}`;document.getElementById('packBar').style.width=(n?p/n*100:0)+'%';}
+function toggleAllPackingItems(value){document.querySelectorAll('input[name="packingItem"]').forEach(input=>{input.checked=value;input.dispatchEvent(new Event('change'))})}
+function updatePackingSelectAll(){const all=[...document.querySelectorAll('input[name="packingItem"]')],selected=all.filter(input=>input.checked),master=document.getElementById('selectAllPackingItems');if(master)master.checked=all.length>0&&selected.length===all.length}
+function completeJourney(id){
+  const j=db.journeys.find(x=>x.id===id);if(!j)return;
+  const returning=j.status==='Completed';
+  const items=returning?(j.returnItems||[]):j.items;
+  if(!items.length){alert('Select at least one item first.');return}
+  const un=items.filter(x=>!x.packed).length;
+  if(un && !confirm(`${un} planned item(s) are not packed. Complete anyway?`))return;
+  if(returning){j.status='Returned';j.returnedAt=new Date().toISOString();items.filter(x=>x.packed).forEach(x=>{const it=db.items.find(i=>i.id===x.itemId);if(it)it.locationId=j.from})}
+  else{j.status='Completed';j.completedAt=new Date().toISOString();j.items.filter(x=>x.packed).forEach(x=>{const it=db.items.find(i=>i.id===x.itemId);if(it)it.locationId=j.to})}
+  save();closeModal();render('journeys');
+}
+
+function viewShopping(){
+  return `<div class="card"><div class="toolbar"><button class="primary" onclick="openShoppingModal()">+ Add Purchase Reminder</button></div>${db.shopping.map(x=>`<div class="journey-card"><div class="journey-head"><div><div class="journey-title">${x.purchased?'✅':'🛒'} ${esc(x.name)}</div><div class="journey-meta">${esc(x.priority)} priority ${x.notes?'• '+esc(x.notes):''}</div></div><span class="badge ${x.purchased?'green':x.priority==='High'?'red':'orange'}">${x.purchased?'Purchased': 'Not purchased'}</span></div><div style="display:flex;gap:8px"><button class="secondary" onclick="togglePurchased('${x.id}')">${x.purchased?'Mark not purchased':'Mark purchased'}</button><button class="danger" onclick="deleteShopping('${x.id}')">Delete</button></div></div>`).join('')||'<div class="empty">Your future purchase list is empty.</div>'}</div>`;
+}
+function togglePurchased(id){const x=db.shopping.find(x=>x.id===id);if(x){x.purchased=!x.purchased;save();render('shopping')}}
+function deleteShopping(id){if(confirm('Delete this reminder?')){db.shopping=db.shopping.filter(x=>x.id!==id);save();render('shopping')}}
+function viewChecklists(){
+  return `<div class="card"><div class="toolbar"><button class="primary" onclick="openChecklistModal()">+ New Checklist</button></div>${db.checklists.map(c=>`<div class="journey-card"><div class="journey-title">☑️ ${esc(c.name)}</div><div class="journey-meta">${c.items.length} tasks</div>${c.items.map((x,i)=>`<label style="display:block;padding:7px 0"><input type="checkbox" ${x.done?'checked':''} onchange="toggleTask('${c.id}',${i},this.checked)"> ${esc(x.text)}</label>`).join('')}<button class="danger" onclick="deleteChecklist('${c.id}')">Delete</button></div>`).join('')||'<div class="empty">Create a checklist for hostel preparation, travel, exams, or anything else.</div>'}</div>`;
+}
+function toggleTask(id,i,v){const c=db.checklists.find(x=>x.id===id);if(c){c.items[i].done=v;save()}}
+function deleteChecklist(id){if(confirm('Delete this checklist?')){db.checklists=db.checklists.filter(x=>x.id!==id);save();render('checklists')}}
+function viewHistory(){
+  const done=db.journeys.filter(j=>j.status==='Completed'||j.status==='Returned').slice().reverse();
+  return `<div class="card"><h3>Journey Records</h3>${done.map(j=>{const returned=j.status==='Returned',outbound=j.items.filter(x=>x.packed).length,back=(j.returnItems||[]).filter(x=>x.packed).length;return `<div class="journey-card"><div class="journey-title">🧳 ${esc(j.name||locName(j.from)+' → '+locName(j.to))}</div><div class="journey-meta">${esc(locName(j.from))} → ${esc(locName(j.to))} • ${fmtDate(j.date)} • ${returned?'Returned':'At destination'}</div><div class="small">${outbound} items taken from ${esc(locName(j.from))}${returned?` • ${back} items brought back to ${esc(locName(j.from))}`:''}</div><div style="margin-top:10px"><button class="secondary" onclick="openJourney('${j.id}')">${returned?'View Return Record':'Open Return Packing'}</button></div></div>`}).join('')||'<div class="empty">No journey records yet.</div>'}</div>`;
+}
+
+function openModal(title,body){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modal').classList.add('open')}
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+
+function openItemModal(id){
+  const i=db.items.find(x=>x.id===id)||{name:'',qty:1,category:'Daily Use',checklistId:'check-daily',locationId:db.locations[0]?.id||'',important:false,notes:''};
+  pendingImage=i.image||'';
+  openModal(id?'Edit Item':'Add Item',`<form onsubmit="saveItem(event,'${id||''}')"><div class="form-grid">
+  <div class="field full"><label>Item name *</label><input id="fName" required value="${esc(i.name)}" placeholder="e.g. Laptop"></div>
+  <input type="hidden" id="fLoc" value="${esc(i.locationId||'')}"><input type="hidden" id="fCategory" value="${esc(i.category||'Daily Use')}"><input type="hidden" id="fChecklist" value="${esc(i.checklistId||'check-daily')}"><input type="hidden" id="fImp" value="false">
+  <div class="field full"><label>Item picture</label><input id="fImage" type="file" accept="image/*" onchange="readItemImage(event)"><div id="imagePreview" class="small">${pendingImage?'Picture selected.':'No picture selected.'}</div><button type="button" class="secondary" onclick="clearItemImage()">Remove picture</button></div>
+  <div class="field full"><label>Notes</label><textarea id="fNotes" rows="3" placeholder="Optional">${esc(i.notes||'')}</textarea></div>
+  </div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button class="primary">Save Item</button></div></form>`);
+}
+function readItemImage(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{const image=new Image();image.onload=()=>{const scale=Math.min(1,900/Math.max(image.width,image.height)),canvas=document.createElement('canvas');canvas.width=Math.round(image.width*scale);canvas.height=Math.round(image.height*scale);canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);pendingImage=canvas.toDataURL('image/jpeg',.8);document.getElementById('imagePreview').textContent='Picture selected.'};image.src=reader.result};reader.readAsDataURL(file)}
+function clearItemImage(){if(confirm('Remove this picture?')){pendingImage='';document.getElementById('fImage').value='';document.getElementById('imagePreview').textContent='No picture selected.'}}
+function saveItem(e,id){e.preventDefault();const category=document.getElementById('fCategory').value;const data={name:document.getElementById('fName').value.trim(),qty:1,category,checklistId:document.getElementById('fChecklist').value,locationId:document.getElementById('fLoc').value,important:false,image:pendingImage,notes:document.getElementById('fNotes').value.trim()};if(id)Object.assign(db.items.find(x=>x.id===id),data);else db.items.push({id:uid('item'),...data});save();closeModal();render('inventory')}
+function deleteItem(id){if(confirm('Delete this item from your inventory?')){db.items=db.items.filter(x=>x.id!==id);save();render('inventory')}}
+
+function openLocationModal(id){
+ const l=db.locations.find(x=>x.id===id)||{name:'',type:'Other',notes:''};
+ openModal(id?'Edit Location':'Add Location',`<form onsubmit="saveLocation(event,'${id||''}')"><div class="form-grid">
+ <div class="field full"><label>Location name *</label><input id="lName" required value="${esc(l.name)}" placeholder="e.g. Karachi"></div>
+ <div class="field"><label>Type</label><select id="lType">${['Home','Hostel','City','Hotel','University','Other'].map(x=>`<option ${x===l.type?'selected':''}>${x}</option>`).join('')}</select></div>
+ <div class="field"><label>Notes</label><input id="lNotes" value="${esc(l.notes||'')}"></div>
+ </div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button class="primary">Save Location</button></div></form>`);
+}
+function saveLocation(e,id){e.preventDefault();const d={name:document.getElementById('lName').value.trim(),type:document.getElementById('lType').value,notes:document.getElementById('lNotes').value.trim()};if(id)Object.assign(db.locations.find(x=>x.id===id),d);else db.locations.push({id:uid('loc'),...d});save();closeModal();render('locations')}
+
+function openJourneyModal(){
+ openModal('New Journey',`<form onsubmit="saveJourney(event)"><div class="form-grid">
+ <div class="field full"><label>Journey name (optional)</label><input id="jName" placeholder="e.g. Karachi Trip"></div>
+ <div class="field"><label>From *</label><input id="jFrom" required placeholder="e.g. Home"></div>
+ <div class="field"><label>To *</label><input id="jTo" required placeholder="e.g. Hostel"></div>
+ <div class="field"><label>Date</label><input id="jDate" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+ <div class="field full"><label>Outbound Packing: select items planned for this journey</label><label class="item-check"><input id="selectAllJourneyItems" type="checkbox" checked onchange="toggleAllJourneyItems(this.checked)"> <strong>Select All Items</strong></label><div class="item-list">${db.items.filter(i=>!i.journeyOnly).map(i=>`<label class="item-check"><input type="checkbox" name="jItem" value="${i.id}" checked onchange="updateSelectAllJourneyItems()"> <span>${esc(i.name)} <span class="small">(${i.qty} • ${esc(locName(i.locationId))})</span></span></label>`).join('')||'<div class="empty" style="grid-column:1/-1">Add inventory items first.</div>'}</div></div>
+ <div class="field full"><label>Extra items for this journey</label><div id="journeyExtras"><div class="checklist-input"><span>1.</span><input name="jExtra" placeholder="e.g. New charger"></div></div><button type="button" class="secondary add-check-item" onclick="addJourneyExtra()">+ Add Extra Item</button></div>
+ </div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button class="primary">Create Journey</button></div></form>`);
+}
+function addJourneyExtra(){const list=document.getElementById('journeyExtras'),number=list.children.length+1;list.insertAdjacentHTML('beforeend',`<div class="checklist-input"><span>${number}.</span><input name="jExtra" placeholder="Extra item ${number}"><button type="button" class="danger" onclick="removeJourneyExtra(this)">Remove</button></div>`)}
+function renumberJourneyExtras(){document.querySelectorAll('#journeyExtras .checklist-input').forEach((row,index)=>row.querySelector('span').textContent=`${index+1}.`)}
+function removeJourneyExtra(button){if(confirm('Remove this extra item from the journey form?')){button.parentElement.remove();renumberJourneyExtras()}}
+function toggleAllJourneyItems(value){document.querySelectorAll('input[name="jItem"]').forEach(input=>input.checked=value)}
+function updateSelectAllJourneyItems(){const all=[...document.querySelectorAll('input[name="jItem"]')],selected=all.filter(input=>input.checked);document.getElementById('selectAllJourneyItems').checked=all.length>0&&selected.length===all.length}
+function saveJourney(e){e.preventDefault();const selected=[...document.querySelectorAll('input[name="jItem"]:checked')].map(x=>({itemId:x.value,packed:false}));const extraNames=[...document.querySelectorAll('input[name="jExtra"]')].map(x=>x.value.trim()).filter(Boolean),extraItems=extraNames.map(name=>{const item={id:uid('item'),name,qty:1,category:'',checklistId:'',locationId:'',important:false,notes:'',journeyOnly:true};db.items.push(item);return {itemId:item.id,packed:false,extra:true}}),fromName=document.getElementById('jFrom').value.trim(),toName=document.getElementById('jTo').value.trim(),findOrCreateLocation=name=>{let location=db.locations.find(item=>item.name.toLowerCase()===name.toLowerCase());if(!location){location={id:uid('loc'),name,type:'Other',notes:'Added from a journey'};db.locations.push(location)}return location.id};const j={id:uid('journey'),name:document.getElementById('jName').value.trim(),from:findOrCreateLocation(fromName),to:findOrCreateLocation(toName),date:document.getElementById('jDate').value,items:[...selected,...extraItems],status:'Planning'};db.journeys.push(j);save();closeModal();render('dashboard');openJourney(j.id)}
+
+function openShoppingModal(){openModal('Add Purchase Reminder',`<form onsubmit="saveShopping(event)"><div class="form-grid"><div class="field full"><label>Item to buy *</label><input id="sName" required placeholder="e.g. Power bank"></div><div class="field"><label>Priority</label><select id="sPriority"><option>Normal</option><option>High</option><option>Low</option></select></div><div class="field"><label>Notes</label><input id="sNotes" placeholder="Optional"></div></div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button class="primary">Save</button></div></form>`)}
+function saveShopping(e){e.preventDefault();db.shopping.push({id:uid('buy'),name:document.getElementById('sName').value.trim(),priority:document.getElementById('sPriority').value,notes:document.getElementById('sNotes').value.trim(),purchased:false});save();closeModal();render('shopping')}
+
+function openChecklistModal(){openModal('New Checklist',`<form onsubmit="saveChecklist(event)"><div class="field"><label>Checklist name *</label><input id="cName" required placeholder="e.g. Going to Hostel"></div><div class="field" style="margin-top:12px"><label>Items</label><div id="checklistInputs"><div class="checklist-input"><span>1.</span><input name="cItem" required placeholder="First item"></div></div><button type="button" class="secondary add-check-item" onclick="addChecklistItem()">+ Add Item</button></div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button class="primary">Create Checklist</button></div></form>`)}
+function addChecklistItem(){const list=document.getElementById('checklistInputs'),number=list.children.length+1;list.insertAdjacentHTML('beforeend',`<div class="checklist-input"><span>${number}.</span><input name="cItem" required placeholder="Item ${number}"><button type="button" class="danger" onclick="removeChecklistItem(this)">Remove</button></div>`)}
+function renumberChecklistItems(){document.querySelectorAll('#checklistInputs .checklist-input').forEach((row,index)=>row.querySelector('span').textContent=`${index+1}.`)}
+function removeChecklistItem(button){if(confirm('Remove this item from the new checklist?')){button.parentElement.remove();renumberChecklistItems()}}
+function saveChecklist(e){e.preventDefault();const name=document.getElementById('cName').value.trim(),checklistId=uid('check'),texts=[...document.querySelectorAll('input[name="cItem"]')].map(x=>x.value.trim()).filter(Boolean),items=texts.map(text=>({text,done:false}));const isHostel=name.toLowerCase().includes('hostel'),category=isHostel?'Hostel Use':'Daily Use',locationId=isHostel?'loc-hostel':'loc-with-me';db.checklists.push({id:checklistId,name,items});texts.forEach(text=>db.items.push({id:uid('item'),name:text,qty:1,category,checklistId,locationId,important:false,notes:''}));save();closeModal();render('inventory')}
+
+function deleteJourney(id){if(confirm('Delete this journey record?')){db.journeys=db.journeys.filter(x=>x.id!==id);save();render('journeys')}}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
+window.addEventListener('storage',event=>{if(event.key===KEY){db=load();render(currentPage)}});
+document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>{render(b.dataset.page);document.getElementById('sidebar').classList.remove('open')}));
+
+render('dashboard');
+</script>
+</body>
+</html>
