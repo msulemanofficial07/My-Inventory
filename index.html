@@ -80,8 +80,8 @@ const defaults={
   journeys:[],
   shopping:[],
   checklists:[
-    {id:'check-daily',name:'Daily Use',items:['Mobile + Headphones','Wallet: CNIC + Visa Card','Glasses','Hair Band','Pen','Watch'].map(text=>({text,done:false}))},
-    {id:'check-hostel',name:'Hostel Use',items:['Laptop 💻','Books + Notebook + Sheets + Pen + Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint + Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap + Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'].map(text=>({text,done:false}))}
+    {id:'check-daily',name:'Personal Things',items:['Mobile + Headphones','Wallet: CNIC + Visa Card','Glasses','Hair Band','Pen','Watch'].map(text=>({text,done:false}))},
+    {id:'check-hostel',name:'Daily Things',items:['Laptop 💻','Books + Notebook + Sheets + Pen + Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint + Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap + Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'].map(text=>({text,done:false}))}
   ]
 };
 let db=load();
@@ -90,13 +90,19 @@ let currentPage='dashboard';
 if(!db.items.length){db.items=structuredClone(defaults.items);save()}
 const missingChecklists=defaults.checklists.filter(def=>!db.checklists.some(item=>item.id===def.id));
 if(missingChecklists.length){db.checklists.push(...structuredClone(missingChecklists));save()}
+if(!db.categoryLabelsSetupV1){
+  db.checklists.forEach(checklist=>{if(checklist.id==='check-daily')checklist.name='Personal Things';if(checklist.id==='check-hostel')checklist.name='Daily Things'});
+  db.items.forEach(item=>{if(item.category==='Daily Use')item.category='Personal Things';if(item.category==='Hostel Use')item.category='Daily Things'});
+  db.categoryLabelsSetupV1=true;
+  save();
+}
 const dailyNames=['Mobile','Headphones','Wallet','CNIC','Visa Card','Glasses','Sunglasses','Watch','Pen','Hair Band','Waistcoat','Chadar'];
 let itemsUpdated=false;
-db.items.forEach(item=>{if(!item.category){item.category=dailyNames.some(name=>item.name.toLowerCase().includes(name.toLowerCase()))?'Daily Use':'Hostel Use';itemsUpdated=true}});
+db.items.forEach(item=>{if(!item.category){item.category=dailyNames.some(name=>item.name.toLowerCase().includes(name.toLowerCase()))?'Personal Things':'Daily Things';itemsUpdated=true}});
 if(itemsUpdated)save();
 if(!db.locationSetupV1){
   const hostel=db.locations.find(item=>item.id==='loc-hostel'||item.type==='Hostel');
-  if(hostel)db.items.filter(item=>item.category==='Hostel Use').forEach(item=>item.locationId=hostel.id);
+  if(hostel)db.items.filter(item=>item.category==='Daily Things').forEach(item=>item.locationId=hostel.id);
   db.locationSetupV1=true;
   save();
 }
@@ -104,13 +110,13 @@ if(!db.withMeSetupV1){
   let withMe=db.locations.find(item=>item.id==='loc-with-me'||item.name==='With Me');
   if(!withMe){withMe={id:'loc-with-me',name:'With Me',type:'Other',notes:'Things currently with me'};db.locations.push(withMe)}
   const home=db.locations.find(item=>item.id==='loc-home'||item.name==='Katta Khel — Home');
-  if(home)db.items.filter(item=>item.locationId===home.id&&item.category==='Daily Use').forEach(item=>item.locationId=withMe.id);
+  if(home)db.items.filter(item=>item.locationId===home.id&&item.category==='Personal Things').forEach(item=>item.locationId=withMe.id);
   db.withMeSetupV1=true;
   save();
 }
 if(!db.dailyUseSetupV2){
   const keptDaily=['Mobile','Headphones','Wallet','CNIC','Visa Card','Glasses','Hair Band','Pen'];
-  db.items.forEach(item=>{if(item.category==='Daily Use'&&!keptDaily.some(name=>item.name.toLowerCase()===name.toLowerCase()))item.category='Other'});
+  db.items.forEach(item=>{if(item.category==='Personal Things'&&!keptDaily.some(name=>item.name.toLowerCase()===name.toLowerCase()))item.category='Other'});
   const dailyChecklist=db.checklists.find(item=>item.id==='check-daily');
   if(dailyChecklist)dailyChecklist.items=structuredClone(defaults.checklists.find(item=>item.id==='check-daily').items);
   db.dailyUseSetupV2=true;
@@ -120,7 +126,7 @@ if(!db.dailyUseSetupV3){
   const keptDaily=['Mobile','Headphones','Wallet','CNIC','Visa Card','Glasses','Hair Band','Pen'];
   db.items.forEach(item=>{
     const isKept=keptDaily.some(name=>item.name.toLowerCase().startsWith(name.toLowerCase()));
-    if(isKept)item.category='Daily Use';
+    if(isKept)item.category='Personal Things';
   });
   db.dailyUseSetupV3=true;
   save();
@@ -129,7 +135,7 @@ if(!db.dailyUseSetupV4){
   const removeItems=['Sunglasses','Waistcoat','Chadar'];
   db.items=db.items.filter(item=>!removeItems.some(name=>item.name.toLowerCase().startsWith(name.toLowerCase())));
   const watch=db.items.find(item=>item.name.toLowerCase().startsWith('watch'));
-  if(watch)watch.category='Daily Use';
+  if(watch)watch.category='Personal Things';
   const dailyChecklist=db.checklists.find(item=>item.id==='check-daily');
   if(dailyChecklist)dailyChecklist.items=structuredClone(defaults.checklists.find(item=>item.id==='check-daily').items);
   db.dailyUseSetupV4=true;
@@ -142,7 +148,7 @@ if(!db.hostelChecklistSetupV2){
   save();
 }
 if(!db.checklistLinksSetupV1){
-  db.items.forEach(item=>{if(!item.checklistId)item.checklistId=item.category==='Daily Use'?'check-daily':item.category==='Hostel Use'?'check-hostel':''});
+  db.items.forEach(item=>{if(!item.checklistId)item.checklistId=item.category==='Personal Things'?'check-daily':item.category==='Daily Things'?'check-hostel':''});
   db.checklistLinksSetupV1=true;
   save();
 }
@@ -225,23 +231,23 @@ function inventoryRows(items){
   const selectedChecklist=document.getElementById('invChecklist')?.value||'';
   if(selectedChecklist&&!['check-daily','check-hostel'].includes(selectedChecklist))return checklistRows(items,db.checklists.find(item=>item.id===selectedChecklist)?.name,selectedChecklist);
   const dailyItems=items.filter(item=>item.checklistId==='check-daily');
-  const groups=['Daily Use','Hostel Use','Other'];
+  const groups=['Personal Things','Daily Things','Other'];
   const hostelItems=items.filter(item=>item.checklistId==='check-hostel');
   const customChecklistIds=[...new Set(items.map(item=>item.checklistId).filter(id=>id&&!['check-daily','check-hostel'].includes(id)))];
   return (dailyItems.length?dailyUseRows(dailyItems):'')+(hostelItems.length?hostelUseRows(hostelItems):'')+customChecklistIds.map(id=>checklistRows(items.filter(item=>item.checklistId===id),db.checklists.find(item=>item.id===id)?.name,id)).join('');
 }
 function dailyUseRows(items){
   const groups=[['Mobile + Headphones',['Mobile','Headphones']],['Wallet (CNIC + Visa Card)',['Wallet','CNIC','Visa Card']],['Glasses',['Glasses']],['Hair Band',['Hair Band']],['Pen',['Pen']],['Watch',['Watch']]];
-  return `<tr class="category-row"><td colspan="3"><strong>📱 Daily Use</strong><span class="small"> • 6 items</span><button class="primary daily-add" onclick="openDailyItemModal()">+ Add Daily Item</button></td></tr><tr><td colspan="3"><ol class="daily-list">${groups.map(([label])=>`<li><strong>${label}</strong></li>`).join('')}</ol></td></tr>`;
+  return `<tr class="category-row"><td colspan="3"><strong>📱 Personal Things</strong><span class="small"> • 6 items</span><button class="primary daily-add" onclick="openDailyItemModal()">+ Add Personal Thing</button></td></tr><tr><td colspan="3"><ol class="daily-list">${groups.map(label=>`<li><strong>${label}</strong></li>`).join('')}</ol></td></tr>`;
 }
-function openDailyItemModal(){openItemModal();document.getElementById('fCategory').value='Daily Use';const withMe=db.locations.find(item=>item.id==='loc-with-me');if(withMe)document.getElementById('fLoc').value=withMe.id}
+function openDailyItemModal(){openItemModal();document.getElementById('fCategory').value='Personal Things';const withMe=db.locations.find(item=>item.id==='loc-with-me');if(withMe)document.getElementById('fLoc').value=withMe.id}
 function hostelUseRows(items){
   const groups=['Laptop 💻','Books + Notebook + Sheets + Pen + Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint + Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap + Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'];
-  return `<tr class="category-row"><td colspan="3"><strong>🧳 Hostel Use</strong><span class="small"> • 14 items</span><button class="primary daily-add" onclick="openHostelItemModal()">+ Add Hostel Item</button></td></tr><tr><td colspan="3"><ol class="daily-list hostel-list">${groups.map(label=>`<li><strong>${label}</strong></li>`).join('')}</ol></td></tr>`;
+  return `<tr class="category-row"><td colspan="3"><strong>🧳 Daily Things</strong><span class="small"> • 14 items</span><button class="primary daily-add" onclick="openHostelItemModal()">+ Add Daily Thing</button></td></tr><tr><td colspan="3"><ol class="daily-list hostel-list">${groups.map(label=>`<li><strong>${label}</strong></li>`).join('')}</ol></td></tr>`;
 }
-function openHostelItemModal(){openItemModal();document.getElementById('fCategory').value='Hostel Use';const hostel=db.locations.find(item=>item.id==='loc-hostel');if(hostel)document.getElementById('fLoc').value=hostel.id}
+function openHostelItemModal(){openItemModal();document.getElementById('fCategory').value='Daily Things';const hostel=db.locations.find(item=>item.id==='loc-hostel');if(hostel)document.getElementById('fLoc').value=hostel.id}
 function checklistRows(items,title,id){return `<tr class="category-row"><td colspan="3"><strong>☑️ ${esc(title||document.getElementById('invChecklist')?.selectedOptions[0]?.text||'Checklist')}</strong><span class="small"> • ${items.length} items</span>${id?`<button class="primary daily-add" onclick="openChecklistItemModal('${id}')">+ Add Item</button>`:''}</td></tr><tr><td colspan="3"><ol class="daily-list">${items.map(item=>`<li><strong>${esc(item.name)}</strong></li>`).join('')}</ol></td></tr>`}
-function openChecklistItemModal(checklistId){openItemModal();document.getElementById('fChecklist').value=checklistId;const checklist=db.checklists.find(item=>item.id===checklistId);document.getElementById('fCategory').value=checklist?.name.toLowerCase().includes('hostel')?'Hostel Use':'Daily Use'}
+function openChecklistItemModal(checklistId){openItemModal();document.getElementById('fChecklist').value=checklistId;document.getElementById('fCategory').value=checklistId==='check-hostel'?'Daily Things':'Personal Things'}
 function bindInventory(){}
 function filterInventory(){const q=(document.getElementById('invSearch').value||'').toLowerCase(),c=document.getElementById('invChecklist').value;let a=db.items.filter(i=>(!q||i.name.toLowerCase().includes(q))&&(!c||i.checklistId===c));document.getElementById('inventoryBody').innerHTML=inventoryRows(a)}
 
@@ -310,11 +316,11 @@ function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 
 function openItemModal(id){
-  const i=db.items.find(x=>x.id===id)||{name:'',qty:1,category:'Daily Use',checklistId:'check-daily',locationId:db.locations[0]?.id||'',important:false,notes:''};
+  const i=db.items.find(x=>x.id===id)||{name:'',qty:1,category:'Personal Things',checklistId:'check-daily',locationId:db.locations[0]?.id||'',important:false,notes:''};
   pendingImage=i.image||'';
   openModal(id?'Edit Item':'Add Item',`<form onsubmit="saveItem(event,'${id||''}')"><div class="form-grid">
   <div class="field full"><label>Item name *</label><input id="fName" required value="${esc(i.name)}" placeholder="e.g. Laptop"></div>
-  <input type="hidden" id="fLoc" value="${esc(i.locationId||'')}"><input type="hidden" id="fCategory" value="${esc(i.category||'Daily Use')}"><input type="hidden" id="fChecklist" value="${esc(i.checklistId||'check-daily')}"><input type="hidden" id="fImp" value="false">
+  <input type="hidden" id="fLoc" value="${esc(i.locationId||'')}"><input type="hidden" id="fCategory" value="${esc(i.category||'Personal Things')}"><input type="hidden" id="fChecklist" value="${esc(i.checklistId||'check-daily')}"><input type="hidden" id="fImp" value="false">
   <div class="field full"><label>Item picture</label><input id="fImage" type="file" accept="image/*" onchange="readItemImage(event)"><div id="imagePreview" class="small">${pendingImage?'Picture selected.':'No picture selected.'}</div><button type="button" class="secondary" onclick="clearItemImage()">Remove picture</button></div>
   <div class="field full"><label>Notes</label><textarea id="fNotes" rows="3" placeholder="Optional">${esc(i.notes||'')}</textarea></div>
   </div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button class="primary">Save Item</button></div></form>`);
@@ -358,7 +364,7 @@ function openChecklistModal(){openModal('New Checklist',`<form onsubmit="saveChe
 function addChecklistItem(){const list=document.getElementById('checklistInputs'),number=list.children.length+1;list.insertAdjacentHTML('beforeend',`<div class="checklist-input"><span>${number}.</span><input name="cItem" required placeholder="Item ${number}"><button type="button" class="danger" onclick="removeChecklistItem(this)">Remove</button></div>`)}
 function renumberChecklistItems(){document.querySelectorAll('#checklistInputs .checklist-input').forEach((row,index)=>row.querySelector('span').textContent=`${index+1}.`)}
 function removeChecklistItem(button){if(confirm('Remove this item from the new checklist?')){button.parentElement.remove();renumberChecklistItems()}}
-function saveChecklist(e){e.preventDefault();const name=document.getElementById('cName').value.trim(),checklistId=uid('check'),texts=[...document.querySelectorAll('input[name="cItem"]')].map(x=>x.value.trim()).filter(Boolean),items=texts.map(text=>({text,done:false}));const isHostel=name.toLowerCase().includes('hostel'),category=isHostel?'Hostel Use':'Daily Use',locationId=isHostel?'loc-hostel':'loc-with-me';db.checklists.push({id:checklistId,name,items});texts.forEach(text=>db.items.push({id:uid('item'),name:text,qty:1,category,checklistId,locationId,important:false,notes:''}));save();closeModal();render('inventory')}
+function saveChecklist(e){e.preventDefault();const name=document.getElementById('cName').value.trim(),checklistId=uid('check'),texts=[...document.querySelectorAll('input[name="cItem"]')].map(x=>x.value.trim()).filter(Boolean),items=texts.map(text=>({text,done:false}));const isHostel=name.toLowerCase().includes('hostel'),category=isHostel?'Daily Things':'Personal Things',locationId=isHostel?'loc-hostel':'loc-with-me';db.checklists.push({id:checklistId,name,items});texts.forEach(text=>db.items.push({id:uid('item'),name:text,qty:1,category,checklistId,locationId,important:false,notes:''}));save();closeModal();render('inventory')}
 
 function deleteJourney(id){const journey=db.journeys.find(x=>x.id===id);if(journey&&confirm('Remove this journey from Journeys? It will remain in History.')){journey.hideFromJourneys=true;journey.hideFromDashboard=true;save();render('journeys')}}
 function deleteHistoryJourney(id){if(confirm('Delete this journey permanently from History?')){db.journeys=db.journeys.filter(x=>x.id!==id);save();render('history')}}
