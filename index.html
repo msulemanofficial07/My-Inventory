@@ -71,6 +71,7 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
 <script>
 const KEY='personalInventoryV1';
 const starterItems=['Mobile 📱','Headphones 🎧','Wallet','CNIC','Visa Card','Glasses 🤓','Watch','Pen 🖊️','Hair Band','Laptop 💻','Books 📚','Notebook 📒','Sheets','Marker','ID Card','Stapler','Clothes','Bunain','Trousers','Shirts','Pillow','Blanket','Mosquito Net','Chapal','Chapli','Boots','Toothbrush','Toothpaste','Miswak','Soap','Face Wash','Shampoo','Hair Oil','Hair Brush','Perfume','Beard Trimmer','Scissors','Razor','Nail Cutter','Lalkash','Tissue Paper','Keys','Iron','Gas'];
+const dailyThings=['Laptop 💻 + External Hardisk + USBs','Vlog Stick + Mic','Books + Notebook + Sheets + Pen & Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint & Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap & Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'];
 const defaults={
   categories:['Personal Things','Daily Things','Other'],
   locations:[
@@ -81,27 +82,25 @@ const defaults={
   items:starterItems.map(name=>({id:'item-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-'),name,qty:1,locationId:'loc-home',important:false,notes:''})),
   journeys:[],
   shopping:[],
-  checklists:[
-    {id:'check-daily',name:'Personal Things',items:['Mobile + Headphones','Wallet: CNIC + Visa Card','Glasses','Hair Band','Pen','Watch'].map(text=>({text,done:false}))},
-    {id:'check-hostel',name:'Daily Things',items:['Laptop 💻 + External Hardisk + USBs','Vlog Stick + Mic','Books + Notebook + Sheets + Pen & Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint & Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap & Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'].map(text=>({text,done:false}))}
-  ]
+  checklists:[]
 };
 let db=load();
 let pendingImage='';
 let currentPage='dashboard';
 if(!db.items.length){db.items=structuredClone(defaults.items);save()}
-const missingChecklists=defaults.checklists.filter(def=>!db.checklists.some(item=>item.id===def.id));
-if(missingChecklists.length){db.checklists.push(...structuredClone(missingChecklists));save()}
 if(!db.categoryLabelsSetupV1){
-  db.checklists.forEach(checklist=>{if(checklist.id==='check-daily')checklist.name='Personal Things';if(checklist.id==='check-hostel')checklist.name='Daily Things'});
   db.items.forEach(item=>{if(item.category==='Daily Use')item.category='Personal Things';if(item.category==='Hostel Use')item.category='Daily Things'});
   db.categoryLabelsSetupV1=true;
   save();
 }
 if(!db.dailyThingsSetupV1){
-  const dailyChecklist=db.checklists.find(item=>item.id==='check-hostel');
-  if(dailyChecklist)dailyChecklist.items=structuredClone(defaults.checklists.find(item=>item.id==='check-hostel').items);
   db.dailyThingsSetupV1=true;
+  save();
+}
+if(!db.checklistResetV1){
+  db.checklists=db.checklists.filter(checklist=>!['check-daily','check-hostel'].includes(checklist.id));
+  db.items.forEach(item=>{if(['check-daily','check-hostel'].includes(item.checklistId))item.checklistId=''});
+  db.checklistResetV1=true;
   save();
 }
 const dailyNames=['Mobile','Headphones','Wallet','CNIC','Visa Card','Glasses','Sunglasses','Watch','Pen','Hair Band','Waistcoat','Chadar'];
@@ -125,8 +124,6 @@ if(!db.withMeSetupV1){
 if(!db.dailyUseSetupV2){
   const keptDaily=['Mobile','Headphones','Wallet','CNIC','Visa Card','Glasses','Hair Band','Pen'];
   db.items.forEach(item=>{if(item.category==='Personal Things'&&!keptDaily.some(name=>item.name.toLowerCase()===name.toLowerCase()))item.category='Other'});
-  const dailyChecklist=db.checklists.find(item=>item.id==='check-daily');
-  if(dailyChecklist)dailyChecklist.items=structuredClone(defaults.checklists.find(item=>item.id==='check-daily').items);
   db.dailyUseSetupV2=true;
   save();
 }
@@ -144,20 +141,7 @@ if(!db.dailyUseSetupV4){
   db.items=db.items.filter(item=>!removeItems.some(name=>item.name.toLowerCase().startsWith(name.toLowerCase())));
   const watch=db.items.find(item=>item.name.toLowerCase().startsWith('watch'));
   if(watch)watch.category='Personal Things';
-  const dailyChecklist=db.checklists.find(item=>item.id==='check-daily');
-  if(dailyChecklist)dailyChecklist.items=structuredClone(defaults.checklists.find(item=>item.id==='check-daily').items);
   db.dailyUseSetupV4=true;
-  save();
-}
-if(!db.hostelChecklistSetupV2){
-  const hostelChecklist=db.checklists.find(item=>item.id==='check-hostel');
-  if(hostelChecklist)hostelChecklist.items=structuredClone(defaults.checklists.find(item=>item.id==='check-hostel').items);
-  db.hostelChecklistSetupV2=true;
-  save();
-}
-if(!db.checklistLinksSetupV1){
-  db.items.forEach(item=>{if(!item.checklistId)item.checklistId=item.category==='Personal Things'?'check-daily':item.category==='Daily Things'?'check-hostel':''});
-  db.checklistLinksSetupV1=true;
   save();
 }
 if(!db.homeLocationSetupV1){
@@ -167,7 +151,6 @@ if(!db.homeLocationSetupV1){
   save();
 }
 
-function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(!x)return structuredClone(defaults);return {...structuredClone(defaults),...x,locations:x.locations||[],items:x.items||[],journeys:x.journeys||[],shopping:x.shopping||[],checklists:x.checklists||[]}}catch(e){return structuredClone(defaults)}}
 function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(!x)return structuredClone(defaults);return {...structuredClone(defaults),...x,categories:x.categories||structuredClone(defaults.categories),locations:x.locations||[],items:x.items||[],journeys:x.journeys||[],shopping:x.shopping||[],checklists:x.checklists||[]}}catch(e){return structuredClone(defaults)}}
 function save(){localStorage.setItem(KEY,JSON.stringify(db));}
 function uid(p='id'){return p+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
@@ -179,7 +162,7 @@ function fmtDate(d){if(!d)return '';return new Date(d+'T00:00:00').toLocaleDateS
 function render(page='dashboard'){
   currentPage=page;
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
-  document.getElementById('newChecklistButton').style.display=page==='inventory'?'inline-flex':'none';
+  document.getElementById('newChecklistButton').style.display='none';
   const titles={dashboard:['Dashboard','Your current belongings, journeys and reminders.'],inventory:['My Inventory','Everything you own, with quantity and current location.'],locations:['Locations','Places where your belongings can be stored or moved.'],journeys:['Journeys','Plan, pack, record and later confirm return journeys.'],shopping:['Things to Buy','A simple reminder list for future purchases.'],checklists:['Checklists','Reusable personal preparation lists.'],history:['History','Your journey and checklist records, including active and completed records.']};
   document.getElementById('pageTitle').textContent=titles[page][0];document.getElementById('pageSub').textContent=titles[page][1];
   const views={dashboard:viewDashboard,inventory:viewInventory,locations:viewLocations,journeys:viewJourneys,shopping:viewShopping,checklists:viewChecklists,history:viewHistory};
@@ -245,7 +228,7 @@ function dailyUseRows(items){
 }
 function openDailyItemModal(){openItemModal();document.getElementById('fCategory').value='Personal Things';const withMe=db.locations.find(item=>item.id==='loc-with-me');if(withMe)document.getElementById('fLoc').value=withMe.id}
 function hostelUseRows(items){
-  const groups=defaults.checklists.find(item=>item.id==='check-hostel').items.map(item=>item.text);
+  const groups=dailyThings;
   return `<tr class="category-row"><td colspan="3"><strong>🧳 Daily Things</strong><span class="small"> • ${groups.length} items</span><button class="primary daily-add" onclick="openHostelItemModal()">+ Add Daily Thing</button></td></tr><tr><td colspan="3"><ol class="daily-list hostel-list">${groups.map(label=>`<li><strong>${esc(label)}</strong></li>`).join('')}</ol></td></tr>`;
 }
 function openHostelItemModal(){openItemModal();document.getElementById('fCategory').value='Daily Things';const hostel=db.locations.find(item=>item.id==='loc-hostel');if(hostel)document.getElementById('fLoc').value=hostel.id}
@@ -256,9 +239,10 @@ function categoryRows(items,title){return `<tr class="category-row"><td colspan=
 function categoryRows(items,title){return `<tr class="category-row"><td colspan="3"><strong>📁 ${esc(title)}</strong><span class="small"> • ${items.length} items</span><button class="primary daily-add" onclick="openCategoryItemModal('${esc(title)}')">+ Add Item</button></td></tr><tr><td colspan="3">${items.length?`<ol class="daily-list">${items.map(item=>`<li><strong>${esc(item.name)}</strong></li>`).join('')}</ol>`:'<div class="empty">No items in this category yet.</div>'}</td></tr>`}
 function openChecklistItemModal(checklistId){openItemModal();document.getElementById('fChecklist').value=checklistId;document.getElementById('fCategory').value='Personal Things'}
 function openCategoryItemModal(category){openItemModal();document.getElementById('fCategory').value=category;document.getElementById('fChecklist').value=''}
-function openCategoryModal(){openModal('New Category',`<form onsubmit="saveCategory(event)"><div class="field"><label>Category name *</label><input id="catName" required placeholder="e.g. Work Things"></div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button class="primary">Create Category</button></div></form>`)}
-function saveCategory(e){e.preventDefault();const name=document.getElementById('catName').value.trim();if(!name)return;if(['Personal Things','Daily Things','Other'].some(category=>category.toLowerCase()===name.toLowerCase())){alert('This category already exists.');return}db.categories=db.categories||[];if(!db.categories.some(category=>category.toLowerCase()===name.toLowerCase()))db.categories.push(name);save();closeModal();render('inventory')}
-function saveCategory(e){e.preventDefault();const name=document.getElementById('catName').value.trim();if(!name)return;if((db.categories||[]).some(category=>category.toLowerCase()===name.toLowerCase())){alert('This category already exists.');return}db.categories=db.categories||[];db.categories.push(name);save();closeModal();render('inventory')}
+function openCategoryModal(){openModal('New Category',`<form onsubmit="saveCategory(event)"><div class="field"><label>Category name *</label><input id="catName" required placeholder="e.g. Work Things"></div><div class="field" style="margin-top:12px"><label>Items</label><div id="categoryInputs"><div class="checklist-input"><span>1.</span><input name="categoryItem" placeholder="First item"></div></div><button type="button" class="secondary add-check-item" onclick="addCategoryItem()">+ Add Item</button></div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button class="primary">Create Category</button></div></form>`)}
+function addCategoryItem(){const list=document.getElementById('categoryInputs'),number=list.children.length+1;list.insertAdjacentHTML('beforeend',`<div class="checklist-input"><span>${number}.</span><input name="categoryItem" placeholder="Item ${number}"><button type="button" class="danger" onclick="removeCategoryItem(this)">Remove</button></div>`)}
+function removeCategoryItem(button){button.parentElement.remove();document.querySelectorAll('#categoryInputs .checklist-input').forEach((row,index)=>row.querySelector('span').textContent=`${index+1}.`)}
+function saveCategory(e){e.preventDefault();const name=document.getElementById('catName').value.trim();if(!name)return;if((db.categories||[]).some(category=>category.toLowerCase()===name.toLowerCase())){alert('This category already exists.');return}db.categories=db.categories||[];db.categories.push(name);const items=[...document.querySelectorAll('input[name="categoryItem"]')].map(input=>input.value.trim()).filter(Boolean);items.forEach(itemName=>db.items.push({id:uid('item'),name:itemName,qty:1,category:name,checklistId:'',locationId:'',important:false,notes:''}));save();closeModal();render('inventory')}
 
 function viewLocations(){
   return `<div class="card"><div class="toolbar"><button class="primary" onclick="openLocationModal()">+ Add Location</button></div>${db.locations.map(l=>`<div class="journey-card"><div class="journey-head"><div><div class="journey-title">📍 ${esc(l.name)}</div><div class="journey-meta">${esc(l.type||'Location')} ${l.notes?'• '+esc(l.notes):''}</div></div><span class="badge">${db.items.filter(i=>i.locationId===l.id).length} item types</span></div></div>`).join('')||'<div class="empty">No locations.</div>'}</div>`;
