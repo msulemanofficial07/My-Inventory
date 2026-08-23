@@ -171,6 +171,16 @@ function render(page='dashboard'){
   document.getElementById('content').innerHTML=views[page]();
   if(page==='inventory') bindInventory();
 }
+function navigate(page){
+  if(page===currentPage)return;
+  history.pushState({page},'',location.href);
+  render(page);
+}
+window.addEventListener('popstate',()=>{
+  if(currentPage!=='dashboard'){
+    render('dashboard');
+  }
+});
 function viewDashboard(){
   const packed=activePackingCount(), planned=activePlannedCount();
   const dashboardJourney=db.journeys.slice().reverse().find(item=>!item.hideFromDashboard);
@@ -180,10 +190,10 @@ function viewDashboard(){
     <div class="stat"><div class="n">${db.shopping.filter(x=>!x.purchased).length}</div><div class="l">Things to buy</div></div>
   </div>
   <div class="two">
-    <div class="card"><h3><button class="dashboard-link" onclick="render('journeys')">🧳 Current Journey Packing</button></h3>${dashboardJourney?journeyMini(dashboardJourney):'<div class="empty">No journey yet. Create your first journey.</div>'}</div>
-    <div class="card"><h3><button class="dashboard-link" onclick="render('shopping')">🛒 Purchase Reminders</button></h3>${shoppingMini()}</div>
+    <div class="card"><h3><button class="dashboard-link" onclick="navigate('journeys')">🧳 Current Journey Packing</button></h3>${dashboardJourney?journeyMini(dashboardJourney):'<div class="empty">No journey yet. Create your first journey.</div>'}</div>
+    <div class="card"><h3><button class="dashboard-link" onclick="navigate('shopping')">🛒 Purchase Reminders</button></h3>${shoppingMini()}</div>
   </div>
-  <div class="card"><h3><button class="dashboard-link" onclick="render('checklists')">☑️ Your Checklists</button></h3><div class="empty">Open My Inventory to manage your checklists.</div></div>`;
+  <div class="card"><h3><button class="dashboard-link" onclick="navigate('checklists')">☑️ Your Checklists</button></h3><div class="empty">Open My Inventory to manage your checklists.</div></div>`;
 }
 function activePlannedCount(){const j=db.journeys[db.journeys.length-1];return j?.items?.length||0}
 function activePackingCount(){const j=db.journeys[db.journeys.length-1];return j?.items?.filter(x=>x.packed).length||0}
@@ -191,16 +201,16 @@ function journeyMini(j){
   const n=j.items?.length||0,p=j.items?.filter(x=>x.packed).length||0;
   return `<div class="journey-card"><div class="journey-head"><div><div class="journey-title">${esc(j.name||locName(j.from)+' → '+locName(j.to))}</div><div class="journey-meta">${esc(locName(j.from))} → ${esc(locName(j.to))} • ${fmtDate(j.date)}</div></div><span class="badge">${p}/${n} packed</span></div><div class="progress"><div style="width:${n?Math.round(p/n*100):0}%"></div></div><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" onclick="openJourneyFromDashboard('${j.id}')">Open Journey</button><button class="danger" onclick="removeJourneyFromDashboard('${j.id}')">Remove from Dashboard</button></div></div>`;
 }
-function openJourneyFromDashboard(id){render('journeys');openJourney(id)}
+function openJourneyFromDashboard(id){navigate('journeys');openJourney(id)}
 function shoppingMini(){
   const arr=db.shopping.filter(x=>!x.purchased&&!x.hideFromDashboard).slice(0,5);if(!arr.length)return '<div class="empty">Nothing on your shopping list.</div>';
-  return arr.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)"><button class="link-button" onclick="openShoppingItem('${x.id}')">${esc(x.name)}</button><span class="badge ${x.priority==='High'?'red':x.priority==='Low'?'green':'orange'}">${esc(x.priority)}</span><button class="danger" onclick="removeShoppingFromDashboard('${x.id}')">Remove</button></div>`).join('')+`<div style="margin-top:12px"><button class="secondary" onclick="render('shopping')">View all</button></div>`;
+  return arr.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)"><button class="link-button" onclick="openShoppingItem('${x.id}')">${esc(x.name)}</button><span class="badge ${x.priority==='High'?'red':x.priority==='Low'?'green':'orange'}">${esc(x.priority)}</span><button class="danger" onclick="removeShoppingFromDashboard('${x.id}')">Remove</button></div>`).join('')+`<div style="margin-top:12px"><button class="secondary" onclick="navigate('shopping')">View all</button></div>`;
 }
 function locationSummary(){
   if(!db.locations.length)return '<div class="empty">No locations.</div>';
   return db.locations.map(l=>{const count=db.items.filter(i=>i.locationId===l.id).length;return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--line)"><button class="link-button" onclick="openLocationItems('${l.id}')">📍 ${esc(l.name)}</button><span class="badge">${count} item types</span></div>`}).join('');
 }
-function openShoppingItem(id){render('shopping');const item=document.querySelector(`[onclick="togglePurchased('${id}')"]`);if(item)item.scrollIntoView({behavior:'smooth',block:'center'})}
+function openShoppingItem(id){navigate('shopping');const item=document.querySelector(`[onclick="togglePurchased('${id}')"]`);if(item)item.scrollIntoView({behavior:'smooth',block:'center'})}
 function removeShoppingFromDashboard(id){const item=db.shopping.find(x=>x.id===id);if(item&&confirm('Remove this reminder from Dashboard only? The original Shopping record will remain safe.')){item.hideFromDashboard=true;save();render('dashboard')}}
 function removeJourneyFromDashboard(id){const journey=db.journeys.find(x=>x.id===id);if(journey&&confirm('Remove this journey from Dashboard only? The original Journey and History record will remain safe.')){journey.hideFromDashboard=true;save();render('dashboard')}}
 function viewInventory(){
@@ -238,7 +248,7 @@ function filterInventory(){const q=(document.getElementById('invSearch').value||
 function viewLocations(){
   return `<div class="card"><div class="toolbar"><button class="primary" onclick="openLocationModal()">+ Add Location</button></div>${db.locations.map(l=>`<div class="journey-card"><div class="journey-head"><div><div class="journey-title">📍 ${esc(l.name)}</div><div class="journey-meta">${esc(l.type||'Location')} ${l.notes?'• '+esc(l.notes):''}</div></div><span class="badge">${db.items.filter(i=>i.locationId===l.id).length} item types</span></div></div>`).join('')||'<div class="empty">No locations.</div>'}</div>`;
 }
-function openLocationItems(id){render('inventory');document.getElementById('invLoc').value=id;filterInventory()}
+function openLocationItems(id){navigate('inventory');document.getElementById('invLoc').value=id;filterInventory()}
 function deleteLocation(id){
   const location=db.locations.find(item=>item.id===id);if(!location)return;
   const used=db.items.some(item=>item.locationId===id)||db.journeys.some(item=>item.from===id||item.to===id);
@@ -354,7 +364,7 @@ function deleteJourney(id){const journey=db.journeys.find(x=>x.id===id);if(journ
 function deleteHistoryJourney(id){if(confirm('Delete this journey permanently from History?')){db.journeys=db.journeys.filter(x=>x.id!==id);save();render('history')}}
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
 window.addEventListener('storage',event=>{if(event.key===KEY){db=load();render(currentPage)}});
-document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>{render(b.dataset.page);document.getElementById('sidebar').classList.remove('open')}));
+document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>{navigate(b.dataset.page);document.getElementById('sidebar').classList.remove('open')}));
 
 render('dashboard');
 </script>
