@@ -31,6 +31,8 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
 .item-list{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.item-check{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;gap:9px;align-items:center}.item-check input{width:auto}.progress{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden}.progress>div{height:100%;background:var(--primary);width:0}.journey-card{border:1px solid var(--line);border-radius:15px;padding:16px;margin-bottom:12px}.journey-head{display:flex;justify-content:space-between;gap:10px}.journey-title{font-weight:750}.journey-meta{font-size:12px;color:var(--muted);margin:4px 0 12px}.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .picker-section{margin-top:14px}.picker-section h4{margin:0 0 8px;font-size:13px;color:#475569;font-weight:750}.picker-section .item-list{margin-top:0}
 .mobile-menu{display:none}.save-note{font-size:12px;color:var(--muted);margin:0 0 14px}.save-note strong{color:var(--success)}
+.live-clock{font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
+.topbar-actions{display:flex;align-items:center;gap:12px}
 @media(max-width:900px){.sidebar{transform:translateX(-100%);transition:.2s}.sidebar.open{transform:translateX(0)}.main{margin-left:0;width:100%;padding:18px}.mobile-menu{display:inline-flex}.grid{grid-template-columns:repeat(2,1fr)}.item-list{grid-template-columns:1fr}}
 @media(max-width:560px){.grid{grid-template-columns:1fr 1fr;gap:10px}.stat{padding:14px}.stat .n{font-size:24px}.topbar{align-items:flex-start}.topbar h2{font-size:22px}.topbar p{font-size:12px}.topbar>.primary{padding:9px 10px;white-space:nowrap}.form-grid,.two{grid-template-columns:1fr}.card{padding:15px}.toolbar{display:grid;grid-template-columns:1fr}.toolbar input,.toolbar select{min-width:0;width:100%}.toolbar .primary{width:100%}.table-wrap{overflow:visible}table{min-width:0}table thead{display:none}table,tbody,tr,td{display:block;width:100%}tr{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}td{border:0;padding:5px 0}td:nth-child(2)::before{content:'Quantity: ';color:var(--muted)}.actions{flex-wrap:wrap}.actions button{flex:1}}
 @media(max-width:560px){.daily-add{float:none;margin:8px 0 0;display:block}.daily-list li{display:block}.daily-actions{float:none;flex-shrink:0;display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:100%}.daily-actions button{padding:7px 8px;font-size:12px}}
@@ -56,7 +58,7 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
       <button class="secondary mobile-menu" onclick="toggleSidebar()">☰</button>
       <div><h2 id="pageTitle">Dashboard</h2><p id="pageSub">A simple personal system for tracking your belongings and journeys.</p></div>
     </div>
-    <button id="newChecklistButton" class="primary" onclick="openChecklistModal()">+ New Checklist</button>
+    <div class="topbar-actions"><div id="liveDateTime" class="live-clock"></div><button id="newChecklistButton" class="primary" onclick="openChecklistModal()">+ New Checklist</button></div>
   </div>
   <div id="content"></div>
 </main>
@@ -159,6 +161,7 @@ function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt
 function locName(id){return db.locations.find(x=>x.id===id)?.name||'Unknown location'}
 function itemName(id){return db.items.find(x=>x.id===id)?.name||'Unknown item'}
 function fmtDate(d){if(!d)return '';return new Date(d+'T00:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
+function updateLiveDateTime(){const now=new Date(),date=now.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'}),time=now.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit',second:'2-digit'});document.getElementById('liveDateTime').textContent=`${date} • ${time}`}
 
 function render(page='dashboard'){
   currentPage=page;
@@ -379,6 +382,8 @@ window.addEventListener('storage',event=>{if(event.key===KEY){db=load();render(c
 document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>{navigate(b.dataset.page);document.getElementById('sidebar').classList.remove('open')}));
 
 render('dashboard');
+updateLiveDateTime();
+setInterval(updateLiveDateTime,1000);
 </script>
 </body>
 </html>
