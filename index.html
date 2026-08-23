@@ -26,6 +26,7 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
 .table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}th,td{padding:13px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
 .badge{display:inline-flex;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:650;background:#eef2ff;color:#3730a3}.badge.green{background:#dcfce7;color:#166534}.badge.orange{background:#ffedd5;color:#9a3412}.badge.red{background:#fee2e2;color:#991b1b}
 .empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #cfd6e2;border-radius:14px}.small{font-size:12px;color:var(--muted)}.item-thumb{width:46px;height:46px;object-fit:cover;border-radius:10px;vertical-align:middle;margin-right:8px;border:1px solid var(--line)}.link-button{border:0;background:transparent;color:var(--primary);padding:0;text-align:left;font-weight:650}.link-button:hover{text-decoration:underline}.daily-list{display:block;counter-reset:daily-number;list-style:none;margin:0;padding-left:34px}.daily-list li{display:list-item;counter-increment:daily-number;position:relative;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}.daily-list li::before{content:counter(daily-number) '.';position:absolute;left:-30px;top:10px;color:var(--primary);font-weight:800;font-size:16px}.daily-list li:last-child{border-bottom:0}.daily-actions{float:right;display:flex;gap:6px}.daily-add{float:right;padding:6px 10px;font-size:12px}.checklist-input{display:flex;align-items:center;gap:8px;margin:8px 0}.checklist-input>span{min-width:22px;color:var(--primary);font-weight:800}.checklist-input input{flex:1;min-width:0}.add-check-item{margin-top:6px}
+.dashboard-link{border:0;background:transparent;color:var(--text);padding:0;font:inherit;font-weight:750;text-align:left;cursor:pointer}.dashboard-link:hover{color:var(--primary)}
 .modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}.modal.open{display:flex}.modal-box{background:#fff;width:min(650px,100%);max-height:90vh;overflow:auto;border-radius:20px;padding:22px;box-shadow:0 25px 70px rgba(0,0,0,.2)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.modal-head h3{margin:0}.close{border:0;background:#f1f5f9;border-radius:10px;padding:7px 11px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:650;color:#475569}.actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
 .item-list{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.item-check{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;gap:9px;align-items:center}.item-check input{width:auto}.progress{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden}.progress>div{height:100%;background:var(--primary);width:0}.journey-card{border:1px solid var(--line);border-radius:15px;padding:16px;margin-bottom:12px}.journey-head{display:flex;justify-content:space-between;gap:10px}.journey-title{font-weight:750}.journey-meta{font-size:12px;color:var(--muted);margin:4px 0 12px}.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .mobile-menu{display:none}.save-note{font-size:12px;color:var(--muted);margin:0 0 14px}.save-note strong{color:var(--success)}
@@ -164,7 +165,7 @@ function render(page='dashboard'){
   currentPage=page;
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
   document.getElementById('newChecklistButton').style.display=page==='inventory'?'inline-flex':'none';
-  const titles={dashboard:['Dashboard','Your current belongings, journeys and reminders.'],inventory:['My Inventory','Everything you own, with quantity and current location.'],locations:['Locations','Places where your belongings can be stored or moved.'],journeys:['Journeys','Plan, pack, record and later confirm return journeys.'],shopping:['Things to Buy','A simple reminder list for future purchases.'],checklists:['Checklists','Reusable personal preparation lists.'],history:['History','Your completed journeys and movement records.']};
+  const titles={dashboard:['Dashboard','Your current belongings, journeys and reminders.'],inventory:['My Inventory','Everything you own, with quantity and current location.'],locations:['Locations','Places where your belongings can be stored or moved.'],journeys:['Journeys','Plan, pack, record and later confirm return journeys.'],shopping:['Things to Buy','A simple reminder list for future purchases.'],checklists:['Checklists','Reusable personal preparation lists.'],history:['History','Your journey records, including active and completed journeys.']};
   document.getElementById('pageTitle').textContent=titles[page][0];document.getElementById('pageSub').textContent=titles[page][1];
   const views={dashboard:viewDashboard,inventory:viewInventory,locations:viewLocations,journeys:viewJourneys,shopping:viewShopping,checklists:viewChecklists,history:viewHistory};
   document.getElementById('content').innerHTML=views[page]();
@@ -175,15 +176,14 @@ function viewDashboard(){
   const dashboardJourney=db.journeys.slice().reverse().find(item=>!item.hideFromDashboard);
   return `<p class="save-note"><strong>Saved on this device</strong> • Your checklist progress and inventory changes are stored automatically in this browser.</p><div class="grid">
     <div class="stat"><div class="n">${db.items.length}</div><div class="l">Total item types</div></div>
-    <div class="stat"><div class="n">${db.locations.length}</div><div class="l">Locations</div></div>
     <div class="stat"><div class="n">${db.journeys.length}</div><div class="l">Journeys</div></div>
     <div class="stat"><div class="n">${db.shopping.filter(x=>!x.purchased).length}</div><div class="l">Things to buy</div></div>
   </div>
   <div class="two">
-    <div class="card"><h3>🧳 Current Journey Packing</h3>${dashboardJourney?journeyMini(dashboardJourney):'<div class="empty">No journey yet. Create your first journey.</div>'}</div>
-    <div class="card"><h3>🛒 Purchase Reminders</h3>${shoppingMini()}</div>
+    <div class="card"><h3><button class="dashboard-link" onclick="render('journeys')">🧳 Current Journey Packing</button></h3>${dashboardJourney?journeyMini(dashboardJourney):'<div class="empty">No journey yet. Create your first journey.</div>'}</div>
+    <div class="card"><h3><button class="dashboard-link" onclick="render('shopping')">🛒 Purchase Reminders</button></h3>${shoppingMini()}</div>
   </div>
-  <div class="card"><h3>☑️ Your Checklists</h3><div class="empty">Open My Inventory to manage your checklists.</div></div>`;
+  <div class="card"><h3><button class="dashboard-link" onclick="render('checklists')">☑️ Your Checklists</button></h3><div class="empty">Open My Inventory to manage your checklists.</div></div>`;
 }
 function activePlannedCount(){const j=db.journeys[db.journeys.length-1];return j?.items?.length||0}
 function activePackingCount(){const j=db.journeys[db.journeys.length-1];return j?.items?.filter(x=>x.packed).length||0}
@@ -247,7 +247,7 @@ function deleteLocation(id){
 }
 
 function viewJourneys(){
-  return `<div class="card"><div class="toolbar"><button class="primary" onclick="openJourneyModal()">+ New Journey</button></div>${db.journeys.slice().reverse().map(journeyCard).join('')||'<div class="empty">No journeys yet. Create one and all your inventory items will be available for selection.</div>'}</div>`;
+  return `<div class="card"><div class="toolbar"><button class="primary" onclick="openJourneyModal()">+ New Journey</button></div>${db.journeys.filter(journey=>!journey.hideFromJourneys).slice().reverse().map(journeyCard).join('')||'<div class="empty">No journeys yet. Create one and all your inventory items will be available for selection.</div>'}</div>`;
 }
 function journeyCard(j){
   const returning=j.status==='Completed',finished=j.status==='Returned',items=returning||finished?(j.returnItems||(j.items||[]).map(x=>({itemId:x.itemId,packed:false}))):(j.items||[]),n=items.length,p=items.filter(x=>x.packed).length;
@@ -291,8 +291,8 @@ function viewChecklists(){
 function toggleTask(id,i,v){const c=db.checklists.find(x=>x.id===id);if(c){c.items[i].done=v;save()}}
 function deleteChecklist(id){if(confirm('Delete this checklist?')){db.checklists=db.checklists.filter(x=>x.id!==id);save();render('checklists')}}
 function viewHistory(){
-  const done=db.journeys.filter(j=>j.status==='Completed'||j.status==='Returned').slice().reverse();
-  return `<div class="card"><h3>Journey Records</h3>${done.map(j=>{const returned=j.status==='Returned',outbound=j.items.filter(x=>x.packed).length,back=(j.returnItems||[]).filter(x=>x.packed).length;return `<div class="journey-card"><div class="journey-title">🧳 ${esc(j.name||locName(j.from)+' → '+locName(j.to))}</div><div class="journey-meta">${esc(locName(j.from))} → ${esc(locName(j.to))} • ${fmtDate(j.date)} • ${returned?'Returned':'At destination'}</div><div class="small">${outbound} items taken from ${esc(locName(j.from))}${returned?` • ${back} items brought back to ${esc(locName(j.from))}`:''}</div><div style="margin-top:10px"><button class="secondary" onclick="openJourney('${j.id}')">${returned?'View Return Record':'Open Return Packing'}</button></div></div>`}).join('')||'<div class="empty">No journey records yet.</div>'}</div>`;
+  const records=db.journeys.filter(j=>!j.hideFromHistory).slice().reverse();
+  return `<div class="card"><h3>Journey Records</h3>${records.map(j=>{const returned=j.status==='Returned',planning=j.status==='Planning',outbound=j.items.filter(x=>x.packed).length,back=(j.returnItems||[]).filter(x=>x.packed).length;return `<div class="journey-card"><div class="journey-title">🧳 ${esc(j.name||locName(j.from)+' → '+locName(j.to))}</div><div class="journey-meta">${esc(locName(j.from))} → ${esc(locName(j.to))} • ${fmtDate(j.date)} • ${planning?'Planning':returned?'Returned':'At destination'}</div><div class="small">${outbound} items taken from ${esc(locName(j.from))}${returned?` • ${back} items brought back to ${esc(locName(j.from))}`:''}</div><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" onclick="openJourney('${j.id}')">${planning?'Open / Pack':returned?'View Return Record':'Open Return Packing'}</button><button class="danger" onclick="deleteHistoryJourney('${j.id}')">Delete from History</button></div></div>`}).join('')||'<div class="empty">No journey records yet.</div>'}</div>`;
 }
 
 function openModal(title,body){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modal').classList.add('open')}
@@ -350,7 +350,8 @@ function renumberChecklistItems(){document.querySelectorAll('#checklistInputs .c
 function removeChecklistItem(button){if(confirm('Remove this item from the new checklist?')){button.parentElement.remove();renumberChecklistItems()}}
 function saveChecklist(e){e.preventDefault();const name=document.getElementById('cName').value.trim(),checklistId=uid('check'),texts=[...document.querySelectorAll('input[name="cItem"]')].map(x=>x.value.trim()).filter(Boolean),items=texts.map(text=>({text,done:false}));const isHostel=name.toLowerCase().includes('hostel'),category=isHostel?'Hostel Use':'Daily Use',locationId=isHostel?'loc-hostel':'loc-with-me';db.checklists.push({id:checklistId,name,items});texts.forEach(text=>db.items.push({id:uid('item'),name:text,qty:1,category,checklistId,locationId,important:false,notes:''}));save();closeModal();render('inventory')}
 
-function deleteJourney(id){if(confirm('Delete this journey record?')){db.journeys=db.journeys.filter(x=>x.id!==id);save();render('journeys')}}
+function deleteJourney(id){const journey=db.journeys.find(x=>x.id===id);if(journey&&confirm('Remove this journey from Journeys? It will remain in History.')){journey.hideFromJourneys=true;journey.hideFromDashboard=true;save();render('journeys')}}
+function deleteHistoryJourney(id){if(confirm('Delete this journey permanently from History?')){db.journeys=db.journeys.filter(x=>x.id!==id);save();render('history')}}
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
 window.addEventListener('storage',event=>{if(event.key===KEY){db=load();render(currentPage)}});
 document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>{render(b.dataset.page);document.getElementById('sidebar').classList.remove('open')}));
