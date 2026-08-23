@@ -81,7 +81,7 @@ const defaults={
   shopping:[],
   checklists:[
     {id:'check-daily',name:'Personal Things',items:['Mobile + Headphones','Wallet: CNIC + Visa Card','Glasses','Hair Band','Pen','Watch'].map(text=>({text,done:false}))},
-    {id:'check-hostel',name:'Daily Things',items:['Laptop 💻','Books + Notebook + Sheets + Pen + Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint + Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap + Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'].map(text=>({text,done:false}))}
+    {id:'check-hostel',name:'Daily Things',items:['Laptop 💻 + External Hardisk + USBs','Vlog Stick + Mic','Books + Notebook + Sheets + Pen & Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint & Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap & Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'].map(text=>({text,done:false}))}
   ]
 };
 let db=load();
@@ -94,6 +94,12 @@ if(!db.categoryLabelsSetupV1){
   db.checklists.forEach(checklist=>{if(checklist.id==='check-daily')checklist.name='Personal Things';if(checklist.id==='check-hostel')checklist.name='Daily Things'});
   db.items.forEach(item=>{if(item.category==='Daily Use')item.category='Personal Things';if(item.category==='Hostel Use')item.category='Daily Things'});
   db.categoryLabelsSetupV1=true;
+  save();
+}
+if(!db.dailyThingsSetupV1){
+  const dailyChecklist=db.checklists.find(item=>item.id==='check-hostel');
+  if(dailyChecklist)dailyChecklist.items=structuredClone(defaults.checklists.find(item=>item.id==='check-hostel').items);
+  db.dailyThingsSetupV1=true;
   save();
 }
 const dailyNames=['Mobile','Headphones','Wallet','CNIC','Visa Card','Glasses','Sunglasses','Watch','Pen','Hair Band','Waistcoat','Chadar'];
@@ -238,12 +244,12 @@ function inventoryRows(items){
 }
 function dailyUseRows(items){
   const groups=[['Mobile + Headphones',['Mobile','Headphones']],['Wallet (CNIC + Visa Card)',['Wallet','CNIC','Visa Card']],['Glasses',['Glasses']],['Hair Band',['Hair Band']],['Pen',['Pen']],['Watch',['Watch']]];
-  return `<tr class="category-row"><td colspan="3"><strong>📱 Personal Things</strong><span class="small"> • 6 items</span><button class="primary daily-add" onclick="openDailyItemModal()">+ Add Personal Thing</button></td></tr><tr><td colspan="3"><ol class="daily-list">${groups.map(label=>`<li><strong>${label}</strong></li>`).join('')}</ol></td></tr>`;
+  return `<tr class="category-row"><td colspan="3"><strong>📱 Personal Things</strong><span class="small"> • ${groups.length} items</span><button class="primary daily-add" onclick="openDailyItemModal()">+ Add Personal Thing</button></td></tr><tr><td colspan="3"><ol class="daily-list">${groups.map(([label])=>`<li><strong>${label}</strong></li>`).join('')}</ol></td></tr>`;
 }
 function openDailyItemModal(){openItemModal();document.getElementById('fCategory').value='Personal Things';const withMe=db.locations.find(item=>item.id==='loc-with-me');if(withMe)document.getElementById('fLoc').value=withMe.id}
 function hostelUseRows(items){
-  const groups=['Laptop 💻','Books + Notebook + Sheets + Pen + Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint + Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap + Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'];
-  return `<tr class="category-row"><td colspan="3"><strong>🧳 Daily Things</strong><span class="small"> • 14 items</span><button class="primary daily-add" onclick="openHostelItemModal()">+ Add Daily Thing</button></td></tr><tr><td colspan="3"><ol class="daily-list hostel-list">${groups.map(label=>`<li><strong>${label}</strong></li>`).join('')}</ol></td></tr>`;
+  const groups=defaults.checklists.find(item=>item.id==='check-hostel').items.map(item=>item.text);
+  return `<tr class="category-row"><td colspan="3"><strong>🧳 Daily Things</strong><span class="small"> • ${groups.length} items</span><button class="primary daily-add" onclick="openHostelItemModal()">+ Add Daily Thing</button></td></tr><tr><td colspan="3"><ol class="daily-list hostel-list">${groups.map(label=>`<li><strong>${esc(label)}</strong></li>`).join('')}</ol></td></tr>`;
 }
 function openHostelItemModal(){openItemModal();document.getElementById('fCategory').value='Daily Things';const hostel=db.locations.find(item=>item.id==='loc-hostel');if(hostel)document.getElementById('fLoc').value=hostel.id}
 function checklistRows(items,title,id){return `<tr class="category-row"><td colspan="3"><strong>☑️ ${esc(title||document.getElementById('invChecklist')?.selectedOptions[0]?.text||'Checklist')}</strong><span class="small"> • ${items.length} items</span>${id?`<button class="primary daily-add" onclick="openChecklistItemModal('${id}')">+ Add Item</button>`:''}</td></tr><tr><td colspan="3"><ol class="daily-list">${items.map(item=>`<li><strong>${esc(item.name)}</strong></li>`).join('')}</ol></td></tr>`}
