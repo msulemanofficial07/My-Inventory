@@ -7,19 +7,18 @@
 <title>My Personal Inventory</title>
 <style>
 :root{
-  --bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e6e9ef;
+  --bg:#eef3fb;--card:rgba(255,255,255,.9);--text:#172033;--muted:#687386;--line:#e4eaf3;
   --primary:#2563eb;--primary2:#1d4ed8;--success:#16a34a;--danger:#dc2626;
-  --warning:#d97706;--shadow:0 10px 30px rgba(15,23,42,.07);--radius:18px
+  --warning:#d97706;--shadow:0 24px 55px rgba(15,23,42,.12);--radius:22px
 }
-*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(circle at top,#f7faff 0%,#edf3fb 40%,#eaf0f6 100%);color:var(--text)}
 button,input,select,textarea{font:inherit} button{cursor:pointer}
-.app{display:flex;min-height:100vh}.sidebar{width:250px;background:#111827;color:#fff;padding:22px 14px;position:fixed;left:0;top:0;bottom:0;z-index:20}
+.app{display:flex;min-height:100vh}.sidebar{width:250px;background:linear-gradient(180deg,#0f172a,#111827 60%,#0b1120);color:#fff;padding:22px 14px;position:fixed;left:0;top:0;bottom:0;z-index:20;border-right:1px solid rgba(148,163,184,.2)}
 .brand{padding:8px 12px 24px}.brand h1{font-size:20px;margin:0 0 4px}.brand p{font-size:12px;color:#9ca3af;margin:0}
-.nav button{display:flex;width:100%;border:0;background:transparent;color:#cbd5e1;padding:12px;border-radius:12px;text-align:left;margin:3px 0;gap:11px;align-items:center}
-.nav button:hover,.nav button.active{background:#1f2937;color:#fff}.nav .icon{width:24px;text-align:center}
+.nav button{display:flex;width:100%;border:0;background:transparent;color:#cbd5e1;padding:12px;border-radius:12px;text-align:left;margin:3px 0;gap:11px;align-items:center;transition:.2s ease}.nav button:hover,.nav button.active{background:linear-gradient(90deg,#1f2937,#0f172a);color:#fff;transform:translateX(2px)}.nav .icon{width:24px;text-align:center}
 .main{margin-left:250px;width:calc(100% - 250px);padding:28px;max-width:1500px}
-.topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:24px}.topbar h2{margin:0;font-size:28px}.topbar p{margin:4px 0 0;color:var(--muted);font-size:13px}
-.primary,.secondary,.danger{border:0;border-radius:12px;padding:10px 15px;font-weight:650}.primary{background:var(--primary);color:white}.primary:hover{background:var(--primary2)}.secondary{background:#eef2ff;color:#334155}.danger{background:#fee2e2;color:#991b1b}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:24px;padding:14px 18px;background:rgba(255,255,255,.68);border:1px solid rgba(148,163,184,.25);backdrop-filter:blur(12px);border-radius:18px;box-shadow:0 10px 25px rgba(15,23,42,.05)}.topbar h2{margin:0;font-size:28px}.topbar p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.primary,.secondary,.danger{border:0;border-radius:12px;padding:10px 15px;font-weight:650;transition:.2s ease}.primary{background:linear-gradient(135deg,var(--primary),#3b82f6);color:white;box-shadow:0 10px 18px rgba(37,99,235,.25)}.primary:hover{background:linear-gradient(135deg,var(--primary2),#2563eb)}.secondary{background:#eef2ff;color:#334155}.secondary:hover{background:#e2e8ff}.danger{background:#fee2e2;color:#991b1b}.danger:hover{background:#fecaca}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.stat{background:var(--card);padding:20px;border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--line)}.stat .n{font-size:30px;font-weight:750}.stat .l{color:var(--muted);font-size:13px;margin-top:4px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-top:18px}.card h3{margin:0 0 14px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.toolbar input,.toolbar select{min-width:180px;flex:1}
 input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 12px;background:#fff;color:var(--text);outline:none}input:focus,select:focus,textarea:focus{border-color:#93b4ff;box-shadow:0 0 0 3px #dbeafe}
@@ -255,9 +254,11 @@ function openAccountModal(){
   const account=db.account||defaults.account;
   const signedIn=account.isLoggedIn && !!account.email;
   const firebaseMissing=!hasCloudConfig();
+  const buttonLabel=firebaseMissing ? 'Connect Google' : 'Continue with Google';
+  const buttonAction=firebaseMissing ? 'showFirebaseSetupHint()' : 'signInWithGoogle()';
   openModal('Account',`<div class="form-grid">
     <div class="field full">
-      <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(135deg,#f8fafc,#eef2ff);">
         <div style="width:46px;height:46px;border-radius:50%;background:${signedIn?'linear-gradient(135deg,#2563eb,#7c3aed)':'#e2e8f0'};display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:18px;overflow:hidden;">${signedIn?`<img src="${esc(account.photoURL||'')}" alt="" style="width:46px;height:46px;object-fit:cover;${account.photoURL?'':'display:none'}">${(account.displayName||account.email||'G').charAt(0).toUpperCase()}`:'G'}</div>
         <div>
           <div style="font-weight:750;">${signedIn?esc(account.displayName||account.email):'Not signed in'}</div>
@@ -271,9 +272,12 @@ function openAccountModal(){
     </div>
   </div>
   <div class="actions">
-    ${signedIn?`<button class="secondary" type="button" onclick="signOutGoogle()">Sign out</button>`:`<button class="primary" type="button" onclick="${firebaseMissing ? 'alert(\'Add your Firebase config in FIREBASE_CONFIG first, then try Connect Google again.\');' : 'signInWithGoogle()'}">${firebaseMissing ? 'Connect Google' : 'Continue with Google'}</button>`}
+    ${signedIn?`<button class="secondary" type="button" onclick="signOutGoogle()">Sign out</button>`:`<button class="primary" type="button" onclick="${buttonAction}">${buttonLabel}</button>`}
     <button class="secondary" type="button" onclick="closeModal()">Close</button>
   </div>`);
+}
+function showFirebaseSetupHint(){
+  alert('Add your Firebase config in FIREBASE_CONFIG first, then click Connect Google again. After that, sign-in will work normally.');
 }
 function viewDashboard(){
   const packed=activePackingCount(), planned=activePlannedCount();
