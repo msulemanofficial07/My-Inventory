@@ -142,8 +142,6 @@ if(!db.dailyUseSetupV3){
   save();
 }
 if(!db.dailyUseSetupV4){
-  const removeItems=['Sunglasses','Waistcoat','Chadar'];
-  db.items=db.items.filter(item=>!removeItems.some(name=>item.name.toLowerCase().startsWith(name.toLowerCase())));
   const watch=db.items.find(item=>item.name.toLowerCase().startsWith('watch'));
   if(watch)watch.category='Personal Things';
   db.dailyUseSetupV4=true;
@@ -234,7 +232,7 @@ function dailyUseRows(items){
 }
 function openDailyItemModal(){openItemModal();document.getElementById('fCategory').value='Personal Things';const withMe=db.locations.find(item=>item.id==='loc-with-me');if(withMe)document.getElementById('fLoc').value=withMe.id}
 function hostelUseRows(items){
-  const groups=dailyThings;
+  const groups=items.map(item=>item.name).filter(Boolean);
   return `<tr class="category-row"><td colspan="3"><strong>🧳 Daily Things</strong><span class="small"> • ${groups.length} items</span><button class="primary daily-add" onclick="openHostelItemModal()">+ Add Daily Thing</button></td></tr><tr><td colspan="3"><ol class="daily-list hostel-list">${groups.map(label=>`<li><strong>${esc(label)}</strong></li>`).join('')}</ol></td></tr>`;
 }
 function openHostelItemModal(){openItemModal();document.getElementById('fCategory').value='Daily Things';const hostel=db.locations.find(item=>item.id==='loc-hostel');if(hostel)document.getElementById('fLoc').value=hostel.id}
