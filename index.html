@@ -77,7 +77,15 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
 <script>
 const KEY='personalInventoryV1';
 const ACCOUNT_KEY='personalInventoryAccountV1';
-const FIREBASE_CONFIG={apiKey:'',authDomain:'',projectId:'',storageBucket:'',messagingSenderId:'',appId:''};
+const FIREBASE_CONFIG_STORAGE_KEY='personalInventoryFirebaseConfigV1';
+const FIREBASE_CONFIG={
+  apiKey:'',
+  authDomain:'',
+  projectId:'',
+  storageBucket:'',
+  messagingSenderId:'',
+  appId:''
+};
 const starterItems=['Mobile 📱','Headphones 🎧','Wallet','CNIC','Visa Card','Glasses 🤓','Watch','Pen 🖊️','Hair Band','Laptop 💻','Books 📚','Notebook 📒','Sheets','Marker','ID Card','Stapler','Clothes','Bunain','Trousers','Shirts','Pillow','Blanket','Mosquito Net','Chapal','Chapli','Boots','Toothbrush','Toothpaste','Miswak','Soap','Face Wash','Shampoo','Hair Oil','Hair Brush','Perfume','Beard Trimmer','Scissors','Razor','Nail Cutter','Lalkash','Tissue Paper','Keys','Iron','Gas'];
 const dailyThings=['Laptop 💻 + External Hardisk + USBs','Vlog Stick + Mic','Books + Notebook + Sheets + Pen & Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint & Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap & Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'];
 const defaults={
@@ -96,8 +104,25 @@ const defaults={
 let db=load();
 let pendingImage='';
 let currentPage='dashboard';
+function loadFirebaseConfig(){
+  try{
+    const stored = JSON.parse(localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY) || '{}');
+    Object.keys(FIREBASE_CONFIG).forEach(key => {
+      if (stored[key]) FIREBASE_CONFIG[key] = stored[key];
+    });
+  } catch (e) {
+    console.warn('Firebase config load failed', e);
+  }
+  return FIREBASE_CONFIG;
+}
+function saveFirebaseConfig(){
+  localStorage.setItem(FIREBASE_CONFIG_STORAGE_KEY, JSON.stringify(FIREBASE_CONFIG));
+}
+function hasCloudConfig(){
+  loadFirebaseConfig();
+  return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.authDomain);
+}
 try{const savedAccount=JSON.parse(localStorage.getItem(ACCOUNT_KEY)||'null');if(savedAccount){db.account={...defaults.account,...savedAccount};}}catch(e){}
-function hasCloudConfig(){return !!(FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.projectId);}
 function saveAccountSession(){localStorage.setItem(ACCOUNT_KEY,JSON.stringify(db.account||defaults.account));}
 function initCloudAccount(){if(!hasCloudConfig()||typeof window==='undefined'||!window.firebase)return false;try{if(!window.firebase.apps || !window.firebase.apps.length){window.firebase.initializeApp(FIREBASE_CONFIG)}}catch(e){}return !!(window.firebase && window.firebase.apps && window.firebase.apps.length);}
 async function saveAccountToCloud(){if(!db.account?.uid || !db.account?.email || !db.account?.cloudEnabled || !hasCloudConfig())return false;const firebase=window.firebase;if(!firebase||!firebase.apps||!firebase.apps.length)return false;try{const auth=firebase.auth();if(!auth.currentUser && db.account?.uid){/* wait for active session from sign-in */ return false;}const ref=firebase.firestore().collection('inventory-users').doc(db.account.uid);await ref.set({uid:db.account.uid,email:db.account.email,displayName:db.account.displayName||'',photoURL:db.account.photoURL||'',data:JSON.stringify(db),updatedAt:new Date().toISOString()},{merge:true});return true;}catch(e){console.warn('Cloud sync unavailable:',e);return false;}}
@@ -256,6 +281,20 @@ function openAccountModal(){
   const firebaseMissing=!hasCloudConfig();
   const buttonLabel=firebaseMissing ? 'Connect Google' : 'Continue with Google';
   const buttonAction=firebaseMissing ? 'showFirebaseSetupHint()' : 'signInWithGoogle()';
+  const configFields = firebaseMissing ? `
+    <div class="field full" style="margin-top:12px;">
+      <label style="font-size:12px;font-weight:700;color:#475569;">Firebase web config</label>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
+        <div class="field"><label>apiKey</label><input id="firebaseApiKey" value="${esc(FIREBASE_CONFIG.apiKey||'')}" placeholder="AIza..."></div>
+        <div class="field"><label>authDomain</label><input id="firebaseAuthDomain" value="${esc(FIREBASE_CONFIG.authDomain||'')}" placeholder="project.firebaseapp.com"></div>
+        <div class="field"><label>projectId</label><input id="firebaseProjectId" value="${esc(FIREBASE_CONFIG.projectId||'')}" placeholder="my-project-12345"></div>
+        <div class="field"><label>storageBucket</label><input id="firebaseStorageBucket" value="${esc(FIREBASE_CONFIG.storageBucket||'')}" placeholder="project.appspot.com"></div>
+        <div class="field"><label>messagingSenderId</label><input id="firebaseMessagingSenderId" value="${esc(FIREBASE_CONFIG.messagingSenderId||'')}" placeholder="1234567890"></div>
+        <div class="field"><label>appId</label><input id="firebaseAppId" value="${esc(FIREBASE_CONFIG.appId||'')}" placeholder="1:123456789:web:abc123"></div>
+      </div>
+      <button class="secondary" type="button" onclick="saveFirebaseConfigFromForm()" style="margin-top:10px;">Save Firebase Config</button>
+    </div>
+  ` : '';
   openModal('Account',`<div class="form-grid">
     <div class="field full">
       <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(135deg,#f8fafc,#eef2ff);">
@@ -270,14 +309,34 @@ function openAccountModal(){
       <label class="item-check"><input id="cloudPermission" type="checkbox" ${account.cloudEnabled?'checked':''} onchange="db.account.cloudEnabled=this.checked;saveAccountSession();"> <strong>Allow cloud sync to save my app data in Google Drive/Firestore</strong></label>
       <div class="small">${firebaseMissing?'Google connection is not active yet because Firebase config is still empty. Add your Firebase web config first, then Connect Google.':'Google Sign-In only asks for your email and basic profile to create a secure account for your data.'}</div>
     </div>
+    ${configFields}
   </div>
   <div class="actions">
     ${signedIn?`<button class="secondary" type="button" onclick="signOutGoogle()">Sign out</button>`:`<button class="primary" type="button" onclick="${buttonAction}">${buttonLabel}</button>`}
     <button class="secondary" type="button" onclick="closeModal()">Close</button>
   </div>`);
 }
+function saveFirebaseConfigFromForm(){
+  const next = {
+    apiKey: document.getElementById('firebaseApiKey')?.value?.trim() || '',
+    authDomain: document.getElementById('firebaseAuthDomain')?.value?.trim() || '',
+    projectId: document.getElementById('firebaseProjectId')?.value?.trim() || '',
+    storageBucket: document.getElementById('firebaseStorageBucket')?.value?.trim() || '',
+    messagingSenderId: document.getElementById('firebaseMessagingSenderId')?.value?.trim() || '',
+    appId: document.getElementById('firebaseAppId')?.value?.trim() || ''
+  };
+  Object.assign(FIREBASE_CONFIG, next);
+  saveFirebaseConfig();
+  if (!hasCloudConfig()) {
+    alert('Please complete all Firebase fields before using Google sign-in.');
+    return;
+  }
+  alert('Firebase config saved. You can now connect with Google.');
+  openAccountModal();
+}
 function showFirebaseSetupHint(){
-  alert('Add your Firebase config in FIREBASE_CONFIG first, then click Connect Google again. After that, sign-in will work normally.');
+  openAccountModal();
+  alert('Paste your Firebase web config in the account modal, then click Save Firebase Config and Connect Google.');
 }
 function viewDashboard(){
   const packed=activePackingCount(), planned=activePlannedCount();
