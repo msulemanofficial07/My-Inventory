@@ -37,9 +37,6 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
 @media(max-width:560px){.daily-add{float:none;margin:8px 0 0;display:block}.daily-list li{display:block}.daily-actions{float:none;flex-shrink:0;display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:100%}.daily-actions button{padding:7px 8px;font-size:12px}}
 </style>
 </head>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div class="app">
@@ -61,7 +58,7 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
       <button class="secondary mobile-menu" onclick="toggleSidebar()">☰</button>
       <div><h2 id="pageTitle">Dashboard</h2><p id="pageSub">A simple personal system for tracking your belongings and journeys.</p></div>
     </div>
-    <div class="topbar-actions"><div id="liveDateTime" class="live-clock"></div><button id="accountButton" class="secondary" onclick="openAccountModal()">👤 Account</button><button id="newChecklistButton" class="primary" onclick="openChecklistModal()">+ New Checklist</button></div>
+    <div class="topbar-actions"><div id="liveDateTime" class="live-clock"></div><button id="newChecklistButton" class="primary" onclick="openChecklistModal()">+ New Checklist</button></div>
   </div>
   <div id="content"></div>
 </main>
@@ -76,8 +73,6 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
 
 <script>
 const KEY='personalInventoryV1';
-const ACCOUNT_KEY='personalInventoryAccountV1';
-const FIREBASE_CONFIG_STORAGE_KEY='personalInventoryFirebaseConfigV1';
 function viewShopping(){
   const reminders=(db.shopping||[]).filter(item=>!item.hideFromShopping);
   return `<div class="card"><div class="toolbar"><button class="primary" onclick="openShoppingModal()">+ Add Reminder</button></div>${reminders.map(reminderCard).join('')||'<div class="empty">Create a reminder for something you want to remember, buy, or do later.</div>'}</div>`;
@@ -92,51 +87,11 @@ function openShoppingModal(reminderId){
 }
 function addReminderExtra(){const list=document.getElementById('reminderExtras'),n=list.children.length+1;list.insertAdjacentHTML('beforeend',`<div class="checklist-input"><span>${n}.</span><input name="reminderExtra" placeholder="Item ${n}"><button type="button" class="danger" onclick="removeReminderExtra(this)">Remove</button></div>`) }
 function removeReminderExtra(button){button.parentElement.remove();document.querySelectorAll('#reminderExtras .checklist-input').forEach((row,index)=>row.querySelector('span').textContent=`${index+1}.`)}
-function saveShopping(e, reminderId){e.preventDefault();const name=document.getElementById('rName').value.trim();const date=document.getElementById('rDate').value;const notes=document.getElementById('rNotes').value.trim();if(!name||!date){alert('Reminder title and date are required.');return}const extraItems=[...document.querySelectorAll('input[name="reminderExtra"]')].map(input=>input.value.trim()).filter(Boolean).map(text=>({text,done:false,locationId:'',extra:true}));if(!extraItems.length){alert('Add at least one reminder item.');return}const payload={id:reminderId||uid('rem'),name,date,locationId:'',notes,items:extraItems,status:'Planning'};if(reminderId){const target=db.shopping.find(item=>item.id===reminderId);if(target){Object.assign(target,payload)}}else{db.shopping.push(payload)};save();closeModal();render('shopping')}
-    const result=await window.firebase.auth().signInWithPopup(provider);
-    const user=result.user;
-    db.account={...db.account,uid:user.uid,email:user.email||'',displayName:user.displayName||'',photoURL:user.photoURL||'',provider:'google',isLoggedIn:true,cloudEnabled:true};
-    saveAccountSession();
-    await loadAccountFromCloud();
-    closeModal();
-    render(currentPage||'dashboard');
-    return true;
-  }catch(error){
-    console.error('Google login failed',error);
-    alert('Google login failed. Please make sure your Firebase project enables Google Sign-In and the popup is allowed.');
-    return false;
-  }
-}
-async function signOutGoogle(){
-  try{if(window.firebase && window.firebase.auth){await window.firebase.auth().signOut();}}
-  catch(e){console.warn('Logout warning',e)}
-  db.account={...defaults.account,cloudEnabled:false,isLoggedIn:false};
-  saveAccountSession();
-  closeModal();
-  render(currentPage||'dashboard');
-}
-async function restoreGoogleSession(){
-  if(!hasCloudConfig() || !window.firebase || !window.firebase.auth) return false;
-  try{
-    await new Promise(resolve=>{
-      const auth=window.firebase.auth();
-      const unsubscribe=auth.onAuthStateChanged(async user=>{
-        unsubscribe();
-        if(user){
-          db.account={...db.account,uid:user.uid,email:user.email||'',displayName:user.displayName||'',photoURL:user.photoURL||'',provider:'google',isLoggedIn:true,cloudEnabled:true};
-          saveAccountSession();
-          await loadAccountFromCloud();
-          render(currentPage||'dashboard');
-        }
-        resolve();
-      });
-    });
-    return true;
-  }catch(e){
-    console.warn('Google session restore failed',e);
-    return false;
-  }
-}
+const defaults={categories:['Personal Things','Daily Things'],locations:[],items:[],journeys:[],shopping:[],checklists:[]};
+const dailyThings=['Bedsheet','Pillow','Blanket','Towel','Clothes','Shoes','Toiletries'];
+function load(){try{const stored=JSON.parse(localStorage.getItem(KEY));if(!stored)return structuredClone(defaults);return {...structuredClone(defaults),...stored,categories:stored.categories||structuredClone(defaults.categories),locations:stored.locations||[],items:stored.items||[],journeys:stored.journeys||[],shopping:stored.shopping||[],checklists:stored.checklists||[]}}catch(e){return structuredClone(defaults)}}
+function save(){localStorage.setItem(KEY,JSON.stringify(db))}
+let db=load();
 if(!db.items.length){db.items=structuredClone(defaults.items);save()}
 if(!db.categoryLabelsSetupV1){
   db.items.forEach(item=>{if(item.category==='Daily Use')item.category='Personal Things';if(item.category==='Hostel Use')item.category='Daily Things'});
@@ -201,8 +156,6 @@ if(!db.homeLocationSetupV1){
   save();
 }
 
-function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(!x)return structuredClone(defaults);return {...structuredClone(defaults),...x,categories:x.categories||structuredClone(defaults.categories),locations:x.locations||[],items:x.items||[],journeys:x.journeys||[],shopping:x.shopping||[],checklists:x.checklists||[]}}catch(e){return structuredClone(defaults)}}
-function save(){localStorage.setItem(KEY,JSON.stringify(db));if(db.account?.isLoggedIn && db.account?.cloudEnabled && hasCloudConfig() && window.firebase){saveAccountToCloud();}}
 function uid(p='id'){return p+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function locName(id){return db.locations.find(x=>x.id===id)?.name||'Unknown location'}
@@ -230,40 +183,10 @@ window.addEventListener('popstate',()=>{
     render('dashboard');
   }
 });
-function openAccountModal(){
-  const account=db.account||defaults.account;
-  const signedIn=account.isLoggedIn && !!account.email;
-  const firebaseMissing=!hasCloudConfig();
-  const buttonLabel=firebaseMissing ? 'Connect Google' : 'Continue with Google';
-  const buttonAction=firebaseMissing ? 'showFirebaseSetupHint()' : 'signInWithGoogle()';
-  openModal('Account',`<div class="form-grid">
-    <div class="field full">
-      <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(135deg,#f8fafc,#eef2ff);">
-        <div style="width:46px;height:46px;border-radius:50%;background:${signedIn?'linear-gradient(135deg,#2563eb,#7c3aed)':'#e2e8f0'};display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:18px;overflow:hidden;">${signedIn?`<img src="${esc(account.photoURL||'')}" alt="" style="width:46px;height:46px;object-fit:cover;${account.photoURL?'':'display:none'}">${(account.displayName||account.email||'G').charAt(0).toUpperCase()}`:'G'}</div>
-        <div>
-          <div style="font-weight:750;">${signedIn?esc(account.displayName||account.email):'Not signed in'}</div>
-          <div class="small">${signedIn?esc(account.email):firebaseMissing?'Google account not connected yet':'Google account not connected'}</div>
-        </div>
-      </div>
-    </div>
-    <div class="field full">
-      <label class="item-check"><input id="cloudPermission" type="checkbox" ${account.cloudEnabled?'checked':''} onchange="db.account.cloudEnabled=this.checked;saveAccountSession();"> <strong>Allow cloud sync to save my app data in Google Drive/Firestore</strong></label>
-      <div class="small">${firebaseMissing?'Google sign-in is ready once Firebase is configured.':'Google Sign-In only asks for your email and basic profile to create a secure account for your data.'}</div>
-    </div>
-  </div>
-  <div class="actions">
-    ${signedIn?`<button class="secondary" type="button" onclick="signOutGoogle()">Sign out</button>`:`<button class="primary" type="button" onclick="${buttonAction}">${buttonLabel}</button>`}
-    <button class="secondary" type="button" onclick="closeModal()">Close</button>
-  </div>`);
-}
-function showFirebaseSetupHint(){
-  alert('Add your Firebase web config first, then click Connect Google again.');
-}
 function viewDashboard(){
   const packed=activePackingCount(), planned=activePlannedCount();
   const dashboardJourney=db.journeys.slice().reverse().find(item=>!item.hideFromDashboard);
-  const syncStatus = db.account?.isLoggedIn ? `Google sync active for ${db.account.email}` : 'Saved locally on this device';
-  return `<p class="save-note"><strong>${syncStatus}</strong> • Your checklist progress and inventory changes are stored automatically in this browser, and cloud sync can be enabled from the account screen.</p><div class="grid">
+  return `<p class="save-note"><strong>Saved locally on this device</strong> • Your checklist progress and inventory changes are stored automatically in this browser.</p><div class="grid">
     <div class="stat"><div class="n">${db.items.length}</div><div class="l">Total item types</div></div>
     <div class="stat"><div class="n">${db.journeys.length}</div><div class="l">Journeys</div></div>
     <div class="stat"><div class="n">${db.shopping.filter(x=>!x.purchased).length}</div><div class="l">Reminders</div></div>
@@ -328,6 +251,9 @@ function addCategoryItem(){const list=document.getElementById('categoryInputs'),
 function removeCategoryItem(button){button.parentElement.remove();document.querySelectorAll('#categoryInputs .checklist-input').forEach((row,index)=>row.querySelector('span').textContent=`${index+1}.`)}
 function saveCategory(e){e.preventDefault();const name=document.getElementById('catName').value.trim();if(!name)return;if((db.categories||[]).some(category=>category.toLowerCase()===name.toLowerCase())){alert('This category already exists.');return}db.categories=db.categories||[];db.categories.push(name);const items=[...document.querySelectorAll('input[name="categoryItem"]')].map(input=>input.value.trim()).filter(Boolean);items.forEach(itemName=>db.items.push({id:uid('item'),name:itemName,qty:1,category:name,checklistId:'',locationId:'',important:false,notes:''}));save();closeModal();render('inventory')}
 
+function viewLocations(){return `<div class="card"><div class="toolbar"><button class="primary" onclick="openLocationModal()">+ Add Location</button></div>${db.locations.map(location=>`<div class="journey-card"><div class="journey-title">📍 ${esc(location.name)}</div><div class="journey-meta">${esc(location.type||'Location')} ${location.notes?'• '+esc(location.notes):''}</div></div>`).join('')||'<div class="empty">No locations yet.</div>'}</div>`}
+function viewJourneys(){return `<div class="card"><div class="toolbar"><button class="primary" onclick="openJourneyModal()">+ New Journey</button></div>${db.journeys.map(journey=>`<div class="journey-card"><div class="journey-title">🧳 ${esc(journey.name||'Journey')}</div><div class="journey-meta">${fmtDate(journey.date)} • ${journey.items?.length||0} items</div></div>`).join('')||'<div class="empty">No journeys yet.</div>'}</div>`}
+
 function viewShopping(){
   const reminders=(db.shopping||[]).filter(item=>!item.hideFromShopping);
   return `<div class="card"><div class="toolbar"><button class="primary" onclick="openShoppingModal()">+ Add Reminder</button></div>${reminders.map(reminderCard).join('')||'<div class="empty">Create a reminder for something you want to remember, buy, or do later.</div>'}</div>`;
@@ -343,15 +269,6 @@ function openShoppingModal(reminderId){
 function addReminderExtra(){const list=document.getElementById('reminderExtras'),n=list.children.length+1;list.insertAdjacentHTML('beforeend',`<div class="checklist-input"><span>${n}.</span><input name="reminderExtra" placeholder="Item ${n}"><button type="button" class="danger" onclick="removeReminderExtra(this)">Remove</button></div>`) }
 function removeReminderExtra(button){button.parentElement.remove();document.querySelectorAll('#reminderExtras .checklist-input').forEach((row,index)=>row.querySelector('span').textContent=`${index+1}.`)}
 function saveShopping(e, reminderId){e.preventDefault();const name=document.getElementById('rName').value.trim();const date=document.getElementById('rDate').value;const notes=document.getElementById('rNotes').value.trim();if(!name||!date){alert('Reminder title and date are required.');return}const extraItems=[...document.querySelectorAll('input[name="reminderExtra"]')].map(input=>input.value.trim()).filter(Boolean).map(text=>({text,done:false,locationId:'',extra:true}));if(!extraItems.length){alert('Add at least one reminder item.');return}const payload={id:reminderId||uid('rem'),name,date,locationId:'',notes,items:extraItems,status:'Planning'};if(reminderId){const target=db.shopping.find(item=>item.id===reminderId);if(target){Object.assign(target,payload)}}else{db.shopping.push(payload)};save();closeModal();render('shopping')}
-  if(!returning&&!j.outboundDefaultsSetup){(j.items||[]).forEach(item=>item.packed=true);j.outboundDefaultsSetup=true;save()}
-  if(returning&&!j.returnItems)j.returnItems=(j.items||[]).map(x=>({itemId:x.itemId,packed:false}));
-  const items=returning?j.returnItems:(j.items||[]),label=returning?'Return packing':'Outbound packing',p=items.filter(x=>x.packed).length,n=items.length;
-  openModal(`${returning?'Return record: ':'Journey: '}${j.name||locName(j.from)+' → '+locName(j.to)}`,`<div class="small" style="margin-bottom:12px">${esc(locName(j.from))} → ${esc(locName(j.to))} • ${fmtDate(j.date)}</div>
-  <div style="display:flex;justify-content:space-between;margin-bottom:8px"><strong>${label}</strong><span id="packCount">${p}/${n}</span></div>
-  <div class="progress"><div id="packBar" style="width:${n?p/n*100:0}%"></div></div>
-  ${returning?'':'<label class="item-check" style="margin-top:14px"><input id="selectAllPackingItems" type="checkbox" checked onchange="toggleAllPackingItems(this.checked)"> <strong>Select All Items</strong></label>'}<div class="item-list" style="margin-top:14px">${items.map((x,idx)=>`<label class="item-check"><input type="checkbox" name="packingItem" ${x.packed?'checked':''} onchange="togglePacked('${j.id}',${idx},this.checked,${returning});updatePackingSelectAll()"> <span>${esc(itemName(x.itemId))}</span></label>`).join('')||'<div class="empty" style="grid-column:1/-1">No items selected for this journey.</div>'}</div>
-  <div class="actions"><button class="secondary" onclick="closeModal()">Close</button>${finished?'':`<button class="primary" onclick="completeJourney('${j.id}')">${returning?'Save Return Record':'Save & Record Trip'}</button>`}</div>`);
-}
 function togglePacked(jid,idx,val,returning=false){const j=db.journeys.find(x=>x.id===jid);if(!j)return;const items=returning?(j.returnItems||(j.returnItems=j.items.map(x=>({itemId:x.itemId,packed:false})))):j.items;items[idx].packed=val;save();const p=items.filter(x=>x.packed).length,n=items.length;document.getElementById('packCount').textContent=`${p}/${n}`;document.getElementById('packBar').style.width=(n?p/n*100:0)+'%';}
 function toggleAllPackingItems(value){document.querySelectorAll('input[name="packingItem"]').forEach(input=>{input.checked=value;input.dispatchEvent(new Event('change'))})}
 function updatePackingSelectAll(){const all=[...document.querySelectorAll('input[name="packingItem"]')],selected=all.filter(input=>input.checked),master=document.getElementById('selectAllPackingItems');if(master)master.checked=all.length>0&&selected.length===all.length}
