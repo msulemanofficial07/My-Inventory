@@ -78,66 +78,21 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
 const KEY='personalInventoryV1';
 const ACCOUNT_KEY='personalInventoryAccountV1';
 const FIREBASE_CONFIG_STORAGE_KEY='personalInventoryFirebaseConfigV1';
-const FIREBASE_CONFIG={
-  apiKey:'',
-  authDomain:'',
-  projectId:'',
-  storageBucket:'',
-  messagingSenderId:'',
-  appId:''
-};
-const starterItems=['Mobile 📱','Headphones 🎧','Wallet','CNIC','Visa Card','Glasses 🤓','Watch','Pen 🖊️','Hair Band','Laptop 💻','Books 📚','Notebook 📒','Sheets','Marker','ID Card','Stapler','Clothes','Bunain','Trousers','Shirts','Pillow','Blanket','Mosquito Net','Chapal','Chapli','Boots','Toothbrush','Toothpaste','Miswak','Soap','Face Wash','Shampoo','Hair Oil','Hair Brush','Perfume','Beard Trimmer','Scissors','Razor','Nail Cutter','Lalkash','Tissue Paper','Keys','Iron','Gas'];
-const dailyThings=['Laptop 💻 + External Hardisk + USBs','Vlog Stick + Mic','Books + Notebook + Sheets + Pen & Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint & Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap & Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'];
-const defaults={
-  account:{uid:'',email:'',displayName:'',photoURL:'',provider:'local',isLoggedIn:false,cloudEnabled:false},
-  categories:['Personal Things','Daily Things','Other'],
-  locations:[
-    {id:'loc-home',name:'Home',type:'Home',notes:'Home location'},
-    {id:'loc-hostel',name:'D.I. Khan — Hostel',type:'Hostel',notes:'Main hostel location'},
-    {id:'loc-with-me',name:'With Me',type:'Other',notes:'Things currently with me'}
-  ],
-  items:starterItems.map(name=>({id:'item-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-'),name,qty:1,locationId:'loc-home',important:false,notes:''})),
-  journeys:[],
-  shopping:[],
-  checklists:[]
-};
-let db=load();
-let pendingImage='';
-let currentPage='dashboard';
-function loadFirebaseConfig(){
-  try{
-    const stored = JSON.parse(localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY) || '{}');
-    Object.keys(FIREBASE_CONFIG).forEach(key => {
-      if (stored[key]) FIREBASE_CONFIG[key] = stored[key];
-    });
-  } catch (e) {
-    console.warn('Firebase config load failed', e);
-  }
-  return FIREBASE_CONFIG;
+function viewShopping(){
+  const reminders=(db.shopping||[]).filter(item=>!item.hideFromShopping);
+  return `<div class="card"><div class="toolbar"><button class="primary" onclick="openShoppingModal()">+ Add Reminder</button></div>${reminders.map(reminderCard).join('')||'<div class="empty">Create a reminder for something you want to remember, buy, or do later.</div>'}</div>`;
 }
-function saveFirebaseConfig(){
-  localStorage.setItem(FIREBASE_CONFIG_STORAGE_KEY, JSON.stringify(FIREBASE_CONFIG));
+function reminderCard(reminder){const items=reminder.items||[];const done=items.filter(item=>item.done).length;const status=reminder.status==='Completed'?'Completed':'Planning';const loc=locName(reminder.locationId||'');return `<div class="journey-card"><div class="journey-head"><div><div class="journey-title">📝 ${esc(reminder.name)}</div><div class="journey-meta">${loc?`${esc(loc)} • `:''}${fmtDate(reminder.date)} • ${done}/${items.length} items • ${status}</div></div><span class="badge ${status==='Completed'?'green':'orange'}">${status}</span></div><div class="progress"><div style="width:${items.length?Math.round(done/items.length*100):0}%"></div></div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="openShoppingModal('${reminder.id}')">Open / Edit</button><button class="secondary" onclick="toggleReminderStatus('${reminder.id}')">${status==='Planning'?'Mark as Done':'Mark as Planning'}</button><button class="danger" onclick="deleteShopping('${reminder.id}')">Delete</button></div></div>`;}
+function toggleReminderStatus(id){const reminder=db.shopping.find(item=>item.id===id);if(!reminder)return;reminder.status=reminder.status==='Planning'?'Completed':'Planning';save();render('shopping')}
+function deleteShopping(id){if(confirm('Delete this reminder?')){db.shopping=db.shopping.filter(x=>x.id!==id);save();render('shopping')}}
+function openShoppingModal(reminderId){
+  const reminder=db.shopping.find(item=>item.id===reminderId) || {id:'',name:'',date:new Date().toISOString().slice(0,10),items:[],notes:''};
+  const title=reminderId ? 'Edit Reminder' : 'New Reminder';
+  openModal(title,`<form onsubmit="saveShopping(event,'${reminderId||''}')"><div class="form-grid"><div class="field"><label>Reminder title *</label><input id="rName" required value="${esc(reminder.name||'')}" placeholder="e.g. Buy new charger / Remember gift / Need soap"></div><div class="field"><label>Date *</label><input id="rDate" type="date" required value="${reminder.date||new Date().toISOString().slice(0,10)}"></div><div class="field full"><label>Notes</label><input id="rNotes" value="${esc(reminder.notes||'')}" placeholder="Optional details or reminder reason"></div></div><div class="field full" style="margin-top:12px"><label>Items to remember</label><div id="reminderExtras">${(reminder.items||[]).filter(item=>item.extra || !item.itemId).map((item,index)=>`<div class="checklist-input"><span>${index+1}.</span><input name="reminderExtra" value="${esc(item.text||'')}" placeholder="Item ${index+1}"><button type="button" class="danger" onclick="removeReminderExtra(this)">Remove</button></div>`).join('')||`<div class="checklist-input"><span>1.</span><input name="reminderExtra" placeholder="e.g. toothpaste / gift / charger"><button type="button" class="danger" onclick="removeReminderExtra(this)">Remove</button></div>`}</div><button type="button" class="secondary add-check-item" onclick="addReminderExtra()">+ Add Item</button></div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button class="primary">Save Reminder</button></div></form>`);
 }
-function hasCloudConfig(){
-  loadFirebaseConfig();
-  return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.authDomain);
-}
-try{const savedAccount=JSON.parse(localStorage.getItem(ACCOUNT_KEY)||'null');if(savedAccount){db.account={...defaults.account,...savedAccount};}}catch(e){}
-function saveAccountSession(){localStorage.setItem(ACCOUNT_KEY,JSON.stringify(db.account||defaults.account));}
-function initCloudAccount(){if(!hasCloudConfig()||typeof window==='undefined'||!window.firebase)return false;try{if(!window.firebase.apps || !window.firebase.apps.length){window.firebase.initializeApp(FIREBASE_CONFIG)}}catch(e){}return !!(window.firebase && window.firebase.apps && window.firebase.apps.length);}
-async function saveAccountToCloud(){if(!db.account?.uid || !db.account?.email || !db.account?.cloudEnabled || !hasCloudConfig())return false;const firebase=window.firebase;if(!firebase||!firebase.apps||!firebase.apps.length)return false;try{const auth=firebase.auth();if(!auth.currentUser && db.account?.uid){/* wait for active session from sign-in */ return false;}const ref=firebase.firestore().collection('inventory-users').doc(db.account.uid);await ref.set({uid:db.account.uid,email:db.account.email,displayName:db.account.displayName||'',photoURL:db.account.photoURL||'',data:JSON.stringify(db),updatedAt:new Date().toISOString()},{merge:true});return true;}catch(e){console.warn('Cloud sync unavailable:',e);return false;}}
-async function loadAccountFromCloud(){if(!db.account?.uid || !db.account?.email || !db.account?.cloudEnabled || !hasCloudConfig())return false;const firebase=window.firebase;if(!firebase||!firebase.apps||!firebase.apps.length)return false;try{const ref=firebase.firestore().collection('inventory-users').doc(db.account.uid);const doc=await ref.get();if(doc.exists){const payload=doc.data();try{const fresh=JSON.parse(payload.data||'null');if(fresh && Array.isArray(fresh.items)){db={...db,...fresh};save();return true;}}catch(e){console.warn('Cloud data parse failed',e);}}return true;}catch(e){console.warn('Cloud load unavailable:',e);return false;}}
-async function signInWithGoogle(){
-  if(!hasCloudConfig()){
-    alert('Add your Firebase config in FIREBASE_CONFIG first, then try Connect Google again.');
-    openAccountModal();
-    return false;
-  }
-  if(!initCloudAccount()){alert('Firebase is not initialized. Check your Firebase config.');return false;}
-  try{
-    const provider=new window.firebase.auth.GoogleAuthProvider();
-    provider.addScope('email');
-    provider.addScope('profile');
+function addReminderExtra(){const list=document.getElementById('reminderExtras'),n=list.children.length+1;list.insertAdjacentHTML('beforeend',`<div class="checklist-input"><span>${n}.</span><input name="reminderExtra" placeholder="Item ${n}"><button type="button" class="danger" onclick="removeReminderExtra(this)">Remove</button></div>`) }
+function removeReminderExtra(button){button.parentElement.remove();document.querySelectorAll('#reminderExtras .checklist-input').forEach((row,index)=>row.querySelector('span').textContent=`${index+1}.`)}
+function saveShopping(e, reminderId){e.preventDefault();const name=document.getElementById('rName').value.trim();const date=document.getElementById('rDate').value;const notes=document.getElementById('rNotes').value.trim();if(!name||!date){alert('Reminder title and date are required.');return}const extraItems=[...document.querySelectorAll('input[name="reminderExtra"]')].map(input=>input.value.trim()).filter(Boolean).map(text=>({text,done:false,locationId:'',extra:true}));if(!extraItems.length){alert('Add at least one reminder item.');return}const payload={id:reminderId||uid('rem'),name,date,locationId:'',notes,items:extraItems,status:'Planning'};if(reminderId){const target=db.shopping.find(item=>item.id===reminderId);if(target){Object.assign(target,payload)}}else{db.shopping.push(payload)};save();closeModal();render('shopping')}
     const result=await window.firebase.auth().signInWithPopup(provider);
     const user=result.user;
     db.account={...db.account,uid:user.uid,email:user.email||'',displayName:user.displayName||'',photoURL:user.photoURL||'',provider:'google',isLoggedIn:true,cloudEnabled:true};
@@ -373,27 +328,21 @@ function addCategoryItem(){const list=document.getElementById('categoryInputs'),
 function removeCategoryItem(button){button.parentElement.remove();document.querySelectorAll('#categoryInputs .checklist-input').forEach((row,index)=>row.querySelector('span').textContent=`${index+1}.`)}
 function saveCategory(e){e.preventDefault();const name=document.getElementById('catName').value.trim();if(!name)return;if((db.categories||[]).some(category=>category.toLowerCase()===name.toLowerCase())){alert('This category already exists.');return}db.categories=db.categories||[];db.categories.push(name);const items=[...document.querySelectorAll('input[name="categoryItem"]')].map(input=>input.value.trim()).filter(Boolean);items.forEach(itemName=>db.items.push({id:uid('item'),name:itemName,qty:1,category:name,checklistId:'',locationId:'',important:false,notes:''}));save();closeModal();render('inventory')}
 
-function viewLocations(){
-  return `<div class="card"><div class="toolbar"><button class="primary" onclick="openLocationModal()">+ Add Location</button></div>${db.locations.map(l=>`<div class="journey-card"><div class="journey-head"><div><div class="journey-title">📍 ${esc(l.name)}</div><div class="journey-meta">${esc(l.type||'Location')} ${l.notes?'• '+esc(l.notes):''}</div></div><span class="badge">${db.items.filter(i=>i.locationId===l.id).length} item types</span></div></div>`).join('')||'<div class="empty">No locations.</div>'}</div>`;
+function viewShopping(){
+  const reminders=(db.shopping||[]).filter(item=>!item.hideFromShopping);
+  return `<div class="card"><div class="toolbar"><button class="primary" onclick="openShoppingModal()">+ Add Reminder</button></div>${reminders.map(reminderCard).join('')||'<div class="empty">Create a reminder for something you want to remember, buy, or do later.</div>'}</div>`;
 }
-function openLocationItems(id){navigate('inventory')}
-function deleteLocation(id){
-  const location=db.locations.find(item=>item.id===id);if(!location)return;
-  const used=db.items.some(item=>item.locationId===id)||db.journeys.some(item=>item.from===id||item.to===id);
-  if(used){alert('Move or remove this location\'s items and journey records first.');return}
-  if(confirm(`Delete location "${location.name}"?`)){db.locations=db.locations.filter(item=>item.id!==id);save();render('locations')}
+function reminderCard(reminder){const items=reminder.items||[];const done=items.filter(item=>item.done).length;const status=reminder.status==='Completed'?'Completed':'Planning';const loc=locName(reminder.locationId||'');return `<div class="journey-card"><div class="journey-head"><div><div class="journey-title">📝 ${esc(reminder.name)}</div><div class="journey-meta">${loc?`${esc(loc)} • `:''}${fmtDate(reminder.date)} • ${done}/${items.length} items • ${status}</div></div><span class="badge ${status==='Completed'?'green':'orange'}">${status}</span></div><div class="progress"><div style="width:${items.length?Math.round(done/items.length*100):0}%"></div></div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="openShoppingModal('${reminder.id}')">Open / Edit</button><button class="secondary" onclick="toggleReminderStatus('${reminder.id}')">${status==='Planning'?'Mark as Done':'Mark as Planning'}</button><button class="danger" onclick="deleteShopping('${reminder.id}')">Delete</button></div></div>`;}
+function toggleReminderStatus(id){const reminder=db.shopping.find(item=>item.id===id);if(!reminder)return;reminder.status=reminder.status==='Planning'?'Completed':'Planning';save();render('shopping')}
+function deleteShopping(id){if(confirm('Delete this reminder?')){db.shopping=db.shopping.filter(x=>x.id!==id);save();render('shopping')}}
+function openShoppingModal(reminderId){
+  const reminder=db.shopping.find(item=>item.id===reminderId) || {id:'',name:'',date:new Date().toISOString().slice(0,10),items:[],notes:''};
+  const title=reminderId ? 'Edit Reminder' : 'New Reminder';
+  openModal(title,`<form onsubmit="saveShopping(event,'${reminderId||''}')"><div class="form-grid"><div class="field"><label>Reminder title *</label><input id="rName" required value="${esc(reminder.name||'')}" placeholder="e.g. Buy new charger / Remember gift / Need soap"></div><div class="field"><label>Date *</label><input id="rDate" type="date" required value="${reminder.date||new Date().toISOString().slice(0,10)}"></div><div class="field full"><label>Notes</label><input id="rNotes" value="${esc(reminder.notes||'')}" placeholder="Optional details or reminder reason"></div></div><div class="field full" style="margin-top:12px"><label>Items to remember</label><div id="reminderExtras">${(reminder.items||[]).filter(item=>item.extra || !item.itemId).map((item,index)=>`<div class="checklist-input"><span>${index+1}.</span><input name="reminderExtra" value="${esc(item.text||'')}" placeholder="Item ${index+1}"><button type="button" class="danger" onclick="removeReminderExtra(this)">Remove</button></div>`).join('')||`<div class="checklist-input"><span>1.</span><input name="reminderExtra" placeholder="e.g. toothpaste / gift / charger"><button type="button" class="danger" onclick="removeReminderExtra(this)">Remove</button></div>`}</div><button type="button" class="secondary add-check-item" onclick="addReminderExtra()">+ Add Item</button></div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button class="primary">Save Reminder</button></div></form>`);
 }
-
-function viewJourneys(){
-  return `<div class="card"><div class="toolbar"><button class="primary" onclick="openJourneyModal()">+ New Journey</button></div>${db.journeys.filter(journey=>!journey.hideFromJourneys).slice().reverse().map(journeyCard).join('')||'<div class="empty">No journeys yet. Create one and all your inventory items will be available for selection.</div>'}</div>`;
-}
-function journeyCard(j){
-  const returning=j.status==='Completed',finished=j.status==='Returned',items=returning||finished?(j.returnItems||(j.items||[]).map(x=>({itemId:x.itemId,packed:false}))):(j.items||[]),n=items.length,p=items.filter(x=>x.packed).length;
-  return `<div class="journey-card"><div class="journey-head"><div><div class="journey-title">🧳 ${esc(j.name||locName(j.from)+' → '+locName(j.to))}</div><div class="journey-meta">${esc(locName(j.from))} → ${esc(locName(j.to))} • ${fmtDate(j.date)} • ${finished?'Return complete':returning?'Return packing':'Outbound packing'}</div></div><span class="badge ${p===n&&n?'green':'orange'}">${p}/${n} ${returning||finished?'returned':'packed'}</span></div><div class="progress"><div style="width:${n?Math.round(p/n*100):0}%"></div></div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="openJourney('${j.id}')">${returning?'Open Return Record':finished?'View Return Record':'Open / Pack'}</button>${returning?`<button class="secondary" onclick="completeJourney('${j.id}')">Save Return</button>`:!finished?`<button class="secondary" onclick="completeJourney('${j.id}')">Save & Record Trip</button>`:''}<button class="danger" onclick="deleteJourney('${j.id}')">Delete</button></div></div>`;
-}
-function openJourney(id){
-  const j=db.journeys.find(x=>x.id===id);if(!j)return;
-  const returning=j.status==='Completed'||j.status==='Returned',finished=j.status==='Returned';
+function addReminderExtra(){const list=document.getElementById('reminderExtras'),n=list.children.length+1;list.insertAdjacentHTML('beforeend',`<div class="checklist-input"><span>${n}.</span><input name="reminderExtra" placeholder="Item ${n}"><button type="button" class="danger" onclick="removeReminderExtra(this)">Remove</button></div>`) }
+function removeReminderExtra(button){button.parentElement.remove();document.querySelectorAll('#reminderExtras .checklist-input').forEach((row,index)=>row.querySelector('span').textContent=`${index+1}.`)}
+function saveShopping(e, reminderId){e.preventDefault();const name=document.getElementById('rName').value.trim();const date=document.getElementById('rDate').value;const notes=document.getElementById('rNotes').value.trim();if(!name||!date){alert('Reminder title and date are required.');return}const extraItems=[...document.querySelectorAll('input[name="reminderExtra"]')].map(input=>input.value.trim()).filter(Boolean).map(text=>({text,done:false,locationId:'',extra:true}));if(!extraItems.length){alert('Add at least one reminder item.');return}const payload={id:reminderId||uid('rem'),name,date,locationId:'',notes,items:extraItems,status:'Planning'};if(reminderId){const target=db.shopping.find(item=>item.id===reminderId);if(target){Object.assign(target,payload)}}else{db.shopping.push(payload)};save();closeModal();render('shopping')}
   if(!returning&&!j.outboundDefaultsSetup){(j.items||[]).forEach(item=>item.packed=true);j.outboundDefaultsSetup=true;save()}
   if(returning&&!j.returnItems)j.returnItems=(j.items||[]).map(x=>({itemId:x.itemId,packed:false}));
   const items=returning?j.returnItems:(j.items||[]),label=returning?'Return packing':'Outbound packing',p=items.filter(x=>x.packed).length,n=items.length;
