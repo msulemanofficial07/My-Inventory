@@ -394,6 +394,7 @@ function deleteJourney(id){const journey=db.journeys.find(x=>x.id===id);if(journ
 function deleteHistoryJourney(id){if(confirm('Delete this journey permanently from History?')){db.journeys=db.journeys.filter(x=>x.id!==id);save();render('history')}}
 function deleteHistoryChecklist(id){if(confirm('Delete this checklist permanently from History?')){db.checklists=db.checklists.filter(x=>x.id!==id);db.items=db.items.filter(item=>item.checklistId!==id);save();render('history')}}
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
+document.querySelector('.main').addEventListener('pointerdown',()=>{if(window.matchMedia('(max-width: 900px)').matches)document.getElementById('sidebar').classList.remove('open')});
 window.addEventListener('storage',event=>{if(event.key===KEY){db=load();render(currentPage)}});
 document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>{navigate(b.dataset.page);document.getElementById('sidebar').classList.remove('open')}));
 
