@@ -47,7 +47,7 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
     <button data-page="inventory">📦 <span>My Inventory</span></button>
     <button data-page="journeys">🧳 <span>Journeys</span></button>
     <button data-page="checklists">☑️ <span>Checklists</span></button>
-    <button data-page="shopping">🛒 <span>Things to Buy</span></button>
+    <button data-page="shopping">🛒 <span>Reminders</span></button>
     <button data-page="history">📜 <span>History</span></button>
   </nav>
 </aside>
@@ -176,7 +176,7 @@ function render(page='dashboard'){
   currentPage=page;
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
   document.getElementById('newChecklistButton').style.display='none';
-  const titles={dashboard:['Dashboard','Your current belongings, journeys and reminders.'],inventory:['My Inventory','Everything you own, with quantity and current location.'],locations:['Locations','Places where your belongings can be stored or moved.'],journeys:['Journeys','Plan, pack, record and later confirm return journeys.'],shopping:['Things to Buy','A simple reminder list for future purchases.'],checklists:['Checklists','Reusable personal preparation lists.'],history:['History','Your journey and checklist records, including active and completed records.']};
+  const titles={dashboard:['Dashboard','Your current belongings, journeys and reminders.'],inventory:['My Inventory','Everything you own, with quantity and current location.'],locations:['Locations','Places where your belongings can be stored or moved.'],journeys:['Journeys','Plan, pack, record and later confirm return journeys.'],shopping:['Reminders','A simple reminder list for future purchases.'],checklists:['Checklists','Reusable personal preparation lists.'],history:['History','Your journey and checklist records, including active and completed records.']};
   document.getElementById('pageTitle').textContent=titles[page][0];document.getElementById('pageSub').textContent=titles[page][1];
   const views={dashboard:viewDashboard,inventory:viewInventory,locations:viewLocations,journeys:viewJourneys,shopping:viewShopping,checklists:viewChecklists,history:viewHistory};
   document.getElementById('content').innerHTML=views[page]();
@@ -198,7 +198,7 @@ function viewDashboard(){
   return `<p class="save-note"><strong>Saved on this device</strong> • Your checklist progress and inventory changes are stored automatically in this browser.</p><div class="grid">
     <div class="stat"><div class="n">${db.items.length}</div><div class="l">Total item types</div></div>
     <div class="stat"><div class="n">${db.journeys.length}</div><div class="l">Journeys</div></div>
-    <div class="stat"><div class="n">${db.shopping.filter(x=>!x.purchased).length}</div><div class="l">Things to buy</div></div>
+    <div class="stat"><div class="n">${db.shopping.filter(x=>!x.purchased).length}</div><div class="l">Reminders</div></div>
   </div>
   <div class="two">
     <div class="card"><h3><button class="dashboard-link" onclick="navigate('journeys')">🧳 Current Journey Packing</button></h3>${dashboardJourney?journeyMini(dashboardJourney):'<div class="empty">No journey yet. Create your first journey.</div>'}</div>
