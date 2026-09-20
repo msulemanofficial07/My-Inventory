@@ -38,6 +38,10 @@ input,select,textarea{border:1px solid #d8dee8;border-radius:11px;padding:10px 1
 @media(max-width:560px){.daily-add{float:none;margin:8px 0 0;display:block}.daily-list li{display:block}.daily-actions{float:none;flex-shrink:0;display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:100%}.daily-actions button{padding:7px 8px;font-size:12px}}
 </style>
 </head>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
 <body>
 <div class="app">
 <aside class="sidebar" id="sidebar">
@@ -78,7 +82,7 @@ const FIREBASE_CONFIG={apiKey:'',authDomain:'',projectId:'',storageBucket:'',mes
 const starterItems=['Mobile 📱','Headphones 🎧','Wallet','CNIC','Visa Card','Glasses 🤓','Watch','Pen 🖊️','Hair Band','Laptop 💻','Books 📚','Notebook 📒','Sheets','Marker','ID Card','Stapler','Clothes','Bunain','Trousers','Shirts','Pillow','Blanket','Mosquito Net','Chapal','Chapli','Boots','Toothbrush','Toothpaste','Miswak','Soap','Face Wash','Shampoo','Hair Oil','Hair Brush','Perfume','Beard Trimmer','Scissors','Razor','Nail Cutter','Lalkash','Tissue Paper','Keys','Iron','Gas'];
 const dailyThings=['Laptop 💻 + External Hardisk + USBs','Vlog Stick + Mic','Books + Notebook + Sheets + Pen & Marker','ID Card + Stapler','Clothes + Bunain','Shirts + Paint & Trousers','Chappal + Shoes + Boots','Toothpaste + Toothbrush + Miswak','Face Wash + Soap & Shampoo','Beard Trimmer + Razor 🪒 + Scissors ✂️ + Comb 🪮','Pillow + Blanket + Foam + Mosquito 🦟 Net','Lalkash','Nail Cutter','Tissue Paper','Iron + Gas'];
 const defaults={
-  account:{email:'',password:'',isLoggedIn:false,cloudEnabled:false},
+  account:{uid:'',email:'',displayName:'',photoURL:'',provider:'local',isLoggedIn:false,cloudEnabled:false},
   categories:['Personal Things','Daily Things','Other'],
   locations:[
     {id:'loc-home',name:'Home',type:'Home',notes:'Home location'},
@@ -97,8 +101,59 @@ try{const savedAccount=JSON.parse(localStorage.getItem(ACCOUNT_KEY)||'null');if(
 function hasCloudConfig(){return !!(FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.projectId);}
 function saveAccountSession(){localStorage.setItem(ACCOUNT_KEY,JSON.stringify(db.account||defaults.account));}
 function initCloudAccount(){if(!hasCloudConfig()||typeof window==='undefined'||!window.firebase)return false;try{if(!window.firebase.apps || !window.firebase.apps.length){window.firebase.initializeApp(FIREBASE_CONFIG)}}catch(e){}return !!(window.firebase && window.firebase.apps && window.firebase.apps.length);}
-async function saveAccountToCloud(){if(!db.account?.email||!db.account?.password||!hasCloudConfig())return false;const firebase=window.firebase;if(!firebase||!firebase.apps||!firebase.apps.length)return false;try{const auth=firebase.auth();if(!auth.currentUser){await auth.signInWithEmailAndPassword(db.account.email, db.account.password).catch(async()=>{ await auth.createUserWithEmailAndPassword(db.account.email, db.account.password);});}const dbRef=firebase.firestore();await dbRef.collection('inventory-users').doc(db.account.email.toLowerCase()).set({data:JSON.stringify(db),updatedAt:new Date().toISOString()});return true;}catch(e){console.warn('Cloud sync unavailable:',e);return false;}}
-async function loadAccountFromCloud(){if(!db.account?.email||!db.account?.password||!hasCloudConfig())return false;const firebase=window.firebase;if(!firebase||!firebase.apps||!firebase.apps.length)return false;try{const auth=firebase.auth();if(!auth.currentUser){await auth.signInWithEmailAndPassword(db.account.email, db.account.password).catch(async()=>{ await auth.createUserWithEmailAndPassword(db.account.email, db.account.password);});}const doc=await firebase.firestore().collection('inventory-users').doc(db.account.email.toLowerCase()).get();if(doc.exists){const payload=doc.data();try{const fresh=JSON.parse(payload.data||'null');if(fresh){db={...db,...fresh};save();}}catch(e){console.warn('Cloud data parse failed',e);}}return true;}catch(e){console.warn('Cloud load unavailable:',e);return false;}}
+async function saveAccountToCloud(){if(!db.account?.uid || !db.account?.email || !db.account?.cloudEnabled || !hasCloudConfig())return false;const firebase=window.firebase;if(!firebase||!firebase.apps||!firebase.apps.length)return false;try{const auth=firebase.auth();if(!auth.currentUser && db.account?.uid){/* wait for active session from sign-in */ return false;}const ref=firebase.firestore().collection('inventory-users').doc(db.account.uid);await ref.set({uid:db.account.uid,email:db.account.email,displayName:db.account.displayName||'',photoURL:db.account.photoURL||'',data:JSON.stringify(db),updatedAt:new Date().toISOString()},{merge:true});return true;}catch(e){console.warn('Cloud sync unavailable:',e);return false;}}
+async function loadAccountFromCloud(){if(!db.account?.uid || !db.account?.email || !db.account?.cloudEnabled || !hasCloudConfig())return false;const firebase=window.firebase;if(!firebase||!firebase.apps||!firebase.apps.length)return false;try{const ref=firebase.firestore().collection('inventory-users').doc(db.account.uid);const doc=await ref.get();if(doc.exists){const payload=doc.data();try{const fresh=JSON.parse(payload.data||'null');if(fresh && Array.isArray(fresh.items)){db={...db,...fresh};save();return true;}}catch(e){console.warn('Cloud data parse failed',e);}}return true;}catch(e){console.warn('Cloud load unavailable:',e);return false;}}
+async function signInWithGoogle(){
+  if(!hasCloudConfig()){alert('Add your Firebase config in FIREBASE_CONFIG before enabling Google Sign-In.');return false;}
+  if(!initCloudAccount()){alert('Firebase is not initialized. Check your Firebase config.');return false;}
+  try{
+    const provider=new window.firebase.auth.GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+    const result=await window.firebase.auth().signInWithPopup(provider);
+    const user=result.user;
+    db.account={...db.account,uid:user.uid,email:user.email||'',displayName:user.displayName||'',photoURL:user.photoURL||'',provider:'google',isLoggedIn:true,cloudEnabled:true};
+    saveAccountSession();
+    await loadAccountFromCloud();
+    closeModal();
+    render(currentPage||'dashboard');
+    return true;
+  }catch(error){
+    console.error('Google login failed',error);
+    alert('Google login failed. Please make sure your Firebase project enables Google Sign-In and the popup is allowed.');
+    return false;
+  }
+}
+async function signOutGoogle(){
+  try{if(window.firebase && window.firebase.auth){await window.firebase.auth().signOut();}}
+  catch(e){console.warn('Logout warning',e)}
+  db.account={...defaults.account,cloudEnabled:false,isLoggedIn:false};
+  saveAccountSession();
+  closeModal();
+  render(currentPage||'dashboard');
+}
+async function restoreGoogleSession(){
+  if(!hasCloudConfig() || !window.firebase || !window.firebase.auth) return false;
+  try{
+    await new Promise(resolve=>{
+      const auth=window.firebase.auth();
+      const unsubscribe=auth.onAuthStateChanged(async user=>{
+        unsubscribe();
+        if(user){
+          db.account={...db.account,uid:user.uid,email:user.email||'',displayName:user.displayName||'',photoURL:user.photoURL||'',provider:'google',isLoggedIn:true,cloudEnabled:true};
+          saveAccountSession();
+          await loadAccountFromCloud();
+          render(currentPage||'dashboard');
+        }
+        resolve();
+      });
+    });
+    return true;
+  }catch(e){
+    console.warn('Google session restore failed',e);
+    return false;
+  }
+}
 if(!db.items.length){db.items=structuredClone(defaults.items);save()}
 if(!db.categoryLabelsSetupV1){
   db.items.forEach(item=>{if(item.category==='Daily Use')item.category='Personal Things';if(item.category==='Hostel Use')item.category='Daily Things'});
@@ -164,7 +219,7 @@ if(!db.homeLocationSetupV1){
 }
 
 function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(!x)return structuredClone(defaults);return {...structuredClone(defaults),...x,categories:x.categories||structuredClone(defaults.categories),locations:x.locations||[],items:x.items||[],journeys:x.journeys||[],shopping:x.shopping||[],checklists:x.checklists||[]}}catch(e){return structuredClone(defaults)}}
-function save(){localStorage.setItem(KEY,JSON.stringify(db));}
+function save(){localStorage.setItem(KEY,JSON.stringify(db));if(db.account?.isLoggedIn && db.account?.cloudEnabled && hasCloudConfig() && window.firebase){saveAccountToCloud();}}
 function uid(p='id'){return p+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function locName(id){return db.locations.find(x=>x.id===id)?.name||'Unknown location'}
@@ -192,10 +247,34 @@ window.addEventListener('popstate',()=>{
     render('dashboard');
   }
 });
+function openAccountModal(){
+  const account=db.account||defaults.account;
+  const signedIn=account.isLoggedIn && !!account.email;
+  openModal('Account',`<div class="form-grid">
+    <div class="field full">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;">
+        <div style="width:46px;height:46px;border-radius:50%;background:${signedIn?'linear-gradient(135deg,#2563eb,#7c3aed)':'#e2e8f0'};display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:18px;overflow:hidden;">${signedIn?`<img src="${esc(account.photoURL||'')}" alt="" style="width:46px;height:46px;object-fit:cover;${account.photoURL?'':'display:none'}">${(account.displayName||account.email||'G').charAt(0).toUpperCase()}`:'G'}</div>
+        <div>
+          <div style="font-weight:750;">${signedIn?esc(account.displayName||account.email):'Not signed in'}</div>
+          <div class="small">${signedIn?esc(account.email):'Google account not connected'}</div>
+        </div>
+      </div>
+    </div>
+    <div class="field full">
+      <label class="item-check"><input id="cloudPermission" type="checkbox" ${account.cloudEnabled?'checked':''} onchange="db.account.cloudEnabled=this.checked;saveAccountSession();"> <strong>Allow cloud sync to save my app data in Google Drive/Firestore</strong></label>
+      <div class="small">Google Sign-In only asks for your email and basic profile to create a secure account for your data.</div>
+    </div>
+  </div>
+  <div class="actions">
+    ${signedIn?`<button class="secondary" type="button" onclick="signOutGoogle()">Sign out</button>`:`<button class="primary" type="button" onclick="signInWithGoogle()">Continue with Google</button>`}
+    <button class="secondary" type="button" onclick="closeModal()">Close</button>
+  </div>`);
+}
 function viewDashboard(){
   const packed=activePackingCount(), planned=activePlannedCount();
   const dashboardJourney=db.journeys.slice().reverse().find(item=>!item.hideFromDashboard);
-  return `<p class="save-note"><strong>Saved on this device</strong> • Your checklist progress and inventory changes are stored automatically in this browser.</p><div class="grid">
+  const syncStatus = db.account?.isLoggedIn ? `Google sync active for ${db.account.email}` : 'Saved locally on this device';
+  return `<p class="save-note"><strong>${syncStatus}</strong> • Your checklist progress and inventory changes are stored automatically in this browser, and cloud sync can be enabled from the account screen.</p><div class="grid">
     <div class="stat"><div class="n">${db.items.length}</div><div class="l">Total item types</div></div>
     <div class="stat"><div class="n">${db.journeys.length}</div><div class="l">Journeys</div></div>
     <div class="stat"><div class="n">${db.shopping.filter(x=>!x.purchased).length}</div><div class="l">Reminders</div></div>
