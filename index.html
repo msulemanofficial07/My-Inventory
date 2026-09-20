@@ -104,7 +104,11 @@ function initCloudAccount(){if(!hasCloudConfig()||typeof window==='undefined'||!
 async function saveAccountToCloud(){if(!db.account?.uid || !db.account?.email || !db.account?.cloudEnabled || !hasCloudConfig())return false;const firebase=window.firebase;if(!firebase||!firebase.apps||!firebase.apps.length)return false;try{const auth=firebase.auth();if(!auth.currentUser && db.account?.uid){/* wait for active session from sign-in */ return false;}const ref=firebase.firestore().collection('inventory-users').doc(db.account.uid);await ref.set({uid:db.account.uid,email:db.account.email,displayName:db.account.displayName||'',photoURL:db.account.photoURL||'',data:JSON.stringify(db),updatedAt:new Date().toISOString()},{merge:true});return true;}catch(e){console.warn('Cloud sync unavailable:',e);return false;}}
 async function loadAccountFromCloud(){if(!db.account?.uid || !db.account?.email || !db.account?.cloudEnabled || !hasCloudConfig())return false;const firebase=window.firebase;if(!firebase||!firebase.apps||!firebase.apps.length)return false;try{const ref=firebase.firestore().collection('inventory-users').doc(db.account.uid);const doc=await ref.get();if(doc.exists){const payload=doc.data();try{const fresh=JSON.parse(payload.data||'null');if(fresh && Array.isArray(fresh.items)){db={...db,...fresh};save();return true;}}catch(e){console.warn('Cloud data parse failed',e);}}return true;}catch(e){console.warn('Cloud load unavailable:',e);return false;}}
 async function signInWithGoogle(){
-  if(!hasCloudConfig()){alert('Add your Firebase config in FIREBASE_CONFIG before enabling Google Sign-In.');return false;}
+  if(!hasCloudConfig()){
+    alert('Add your Firebase config in FIREBASE_CONFIG first, then try Connect Google again.');
+    openAccountModal();
+    return false;
+  }
   if(!initCloudAccount()){alert('Firebase is not initialized. Check your Firebase config.');return false;}
   try{
     const provider=new window.firebase.auth.GoogleAuthProvider();
@@ -250,23 +254,24 @@ window.addEventListener('popstate',()=>{
 function openAccountModal(){
   const account=db.account||defaults.account;
   const signedIn=account.isLoggedIn && !!account.email;
+  const firebaseMissing=!hasCloudConfig();
   openModal('Account',`<div class="form-grid">
     <div class="field full">
       <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;">
         <div style="width:46px;height:46px;border-radius:50%;background:${signedIn?'linear-gradient(135deg,#2563eb,#7c3aed)':'#e2e8f0'};display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:18px;overflow:hidden;">${signedIn?`<img src="${esc(account.photoURL||'')}" alt="" style="width:46px;height:46px;object-fit:cover;${account.photoURL?'':'display:none'}">${(account.displayName||account.email||'G').charAt(0).toUpperCase()}`:'G'}</div>
         <div>
           <div style="font-weight:750;">${signedIn?esc(account.displayName||account.email):'Not signed in'}</div>
-          <div class="small">${signedIn?esc(account.email):'Google account not connected'}</div>
+          <div class="small">${signedIn?esc(account.email):firebaseMissing?'Google account not connected yet':'Google account not connected'}</div>
         </div>
       </div>
     </div>
     <div class="field full">
       <label class="item-check"><input id="cloudPermission" type="checkbox" ${account.cloudEnabled?'checked':''} onchange="db.account.cloudEnabled=this.checked;saveAccountSession();"> <strong>Allow cloud sync to save my app data in Google Drive/Firestore</strong></label>
-      <div class="small">Google Sign-In only asks for your email and basic profile to create a secure account for your data.</div>
+      <div class="small">${firebaseMissing?'Google connection is not active yet because Firebase config is still empty. Add your Firebase web config first, then Connect Google.':'Google Sign-In only asks for your email and basic profile to create a secure account for your data.'}</div>
     </div>
   </div>
   <div class="actions">
-    ${signedIn?`<button class="secondary" type="button" onclick="signOutGoogle()">Sign out</button>`:`<button class="primary" type="button" onclick="signInWithGoogle()">Continue with Google</button>`}
+    ${signedIn?`<button class="secondary" type="button" onclick="signOutGoogle()">Sign out</button>`:`<button class="primary" type="button" onclick="${firebaseMissing ? 'alert(\'Add your Firebase config in FIREBASE_CONFIG first, then try Connect Google again.\');' : 'signInWithGoogle()'}">${firebaseMissing ? 'Connect Google' : 'Continue with Google'}</button>`}
     <button class="secondary" type="button" onclick="closeModal()">Close</button>
   </div>`);
 }
