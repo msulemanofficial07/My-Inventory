@@ -198,14 +198,11 @@ function render(page='dashboard'){
 }
 function navigate(page){
   if(page===currentPage)return;
-  history.pushState({page},'',location.href);
+  history.pushState({page},'',`${location.pathname}${location.search}#${page}`);
   render(page);
 }
-window.addEventListener('popstate',()=>{
-  if(currentPage!=='dashboard'){
-    render('dashboard');
-  }
-});
+window.addEventListener('popstate',()=>{const page=location.hash.slice(1);render(['dashboard','inventory','locations','journeys','shopping','checklists','history'].includes(page)?page:'dashboard')});
+window.addEventListener('hashchange',()=>{const page=location.hash.slice(1);if(page&&page!==currentPage)render(['dashboard','inventory','locations','journeys','shopping','checklists','history'].includes(page)?page:'dashboard')});
 function viewDashboard(){
   const packed=activePackingCount(), planned=activePlannedCount();
   const dashboardJourney=db.journeys.slice().reverse().find(item=>!item.hideFromDashboard);
@@ -423,7 +420,8 @@ document.querySelector('.main').addEventListener('pointerdown',()=>{if(window.ma
 window.addEventListener('storage',event=>{if(event.key===KEY){db=load();render(currentPage)}});
 document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>{navigate(b.dataset.page);document.getElementById('sidebar').classList.remove('open')}));
 
-render('dashboard');
+const initialPage=location.hash.slice(1);
+render(['dashboard','inventory','locations','journeys','shopping','checklists','history'].includes(initialPage)?initialPage:'dashboard');
 updateLiveDateTime();
 setInterval(updateLiveDateTime,1000);
 </script>
